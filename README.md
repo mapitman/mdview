@@ -9,6 +9,7 @@ If you have Go installed...
 go get github.com/mapitman/mdview
 ```
 
+Otherwise, grab the correct binary [here](https://github.com/mapitman/mdview/releases/tag/1.0.0).
 ## Usage
 
 ```text
