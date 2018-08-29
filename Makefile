@@ -9,8 +9,9 @@ darwin: bin/darwin-amd64/mdview
 freebsd: bin/freebsd-amd64/mdview
 
 snap:
-	$(GOPATH)=$(HOME)/go go get github.com/golang-commonmark/markdown
-	$(GOPATH)=$(HOME)/go go get github.com/pkg/browser
+	mkdir $(HOME)/go
+	GOPATH=$(HOME)/go go get github.com/golang-commonmark/markdown
+	GOPATH=$(HOME)/go go get github.com/pkg/browser
 	go build -o mdview
 
 bin/linux-amd64/mdview:
