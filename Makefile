@@ -12,7 +12,7 @@ snap:
 	mkdir $(HOME)/go
 	GOPATH=$(HOME)/go go get github.com/golang-commonmark/markdown
 	GOPATH=$(HOME)/go go get github.com/pkg/browser
-	go build -o mdview
+	GOPATH=$(HOME)/go go build -o mdview
 
 bin/linux-amd64/mdview:
 	env GOOS=linux GOARCH=amd64 go build -o ./bin/linux-amd64/mdview
