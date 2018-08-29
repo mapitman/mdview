@@ -8,6 +8,8 @@ darwin: bin/darwin-amd64/mdview
 freebsd: bin/freebsd-amd64/mdview
 
 bin/linux-amd64/mdview:
+	go get github.com/golang-commonmark/markdown
+	go get github.com/pkg/browser
 	env GOOS=linux GOARCH=amd64 go build -o ./bin/linux-amd64/mdview
 	tar czvf linux-amd64.tar.gz -C bin/linux-amd64/ mdview
 bin/linux-i386/mdview:
