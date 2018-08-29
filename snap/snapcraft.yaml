@@ -13,6 +13,7 @@
         command: mdview
   parts:
     mdview:
+      build-packages: [golang]
       # See 'snapcraft plugins'
       plugin: make
 
