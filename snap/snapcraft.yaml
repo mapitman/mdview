@@ -8,8 +8,12 @@
   grade: devel # must be 'stable' to release into candidate/stable channels
   confinement: devmode # use 'strict' once you have the right plugs and slots
 
+  apps:
+      mdview:
+        command: mdview
   parts:
-    my-part:
+    mdview:
       # See 'snapcraft plugins'
-      plugin: nil
+      plugin: make
+
   

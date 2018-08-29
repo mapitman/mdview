@@ -1,5 +1,5 @@
 SHELL=/bin/bash
-default: all
+default: linux
 all: linux windows darwin freebsd
 
 linux: bin/linux-amd64/mdview
@@ -20,6 +20,8 @@ bin/freebsd-amd64/mdview:
 	env GOOS=freebsd GOARCH=amd64 go build -o ./bin/freebsd-amd64/mdview
 	tar czvf freebsd-amd64.tar.gz -C bin/freebsd-amd64/ mdview
 .PHONY: clean
+install:
+	cp bin/linux-amd64/mdview $(DESTDIR)
 clean:
 	rm -rf ./bin
 	rm linux-amd64.tar.gz
