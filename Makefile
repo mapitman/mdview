@@ -1,15 +1,19 @@
 SHELL=/bin/bash
-default: linux
+default: snap
 all: linux windows darwin freebsd
+
 
 linux: bin/linux-amd64/mdview bin/linux-arm64/mdview bin/linux-i386/mdview
 windows: bin/windows-amd64/mdview.exe
 darwin: bin/darwin-amd64/mdview
 freebsd: bin/freebsd-amd64/mdview
 
-bin/linux-amd64/mdview:
+snap:
 	go get github.com/golang-commonmark/markdown
 	go get github.com/pkg/browser
+	go build -o mdview
+
+bin/linux-amd64/mdview:
 	env GOOS=linux GOARCH=amd64 go build -o ./bin/linux-amd64/mdview
 	tar czvf linux-amd64.tar.gz -C bin/linux-amd64/ mdview
 bin/linux-i386/mdview:
