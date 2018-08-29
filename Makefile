@@ -12,7 +12,7 @@ snap:
 	mkdir $(HOME)/go
 	GOPATH=$(HOME)/go go get github.com/golang-commonmark/markdown
 	GOPATH=$(HOME)/go go get github.com/pkg/browser
-	GOPATH=$(HOME)/go go build -o mdview
+	GOPATH=$(HOME)/go go build -o bin/snap/mdview
 
 bin/linux-amd64/mdview:
 	env GOOS=linux GOARCH=amd64 go build -o ./bin/linux-amd64/mdview
@@ -35,7 +35,7 @@ bin/freebsd-amd64/mdview:
 	tar czvf freebsd-amd64.tar.gz -C bin/freebsd-amd64/ mdview
 .PHONY: clean
 install:
-	cp bin/linux-amd64/mdview $(DESTDIR)
+	cp bin/snap/mdview $(DESTDIR)
 clean:
 	rm -rf ./bin
 	rm linux-amd64.tar.gz
