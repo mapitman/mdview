@@ -1,5 +1,7 @@
 # Markdown View
 
+[![Snap Status](https://build.snapcraft.io/badge/mapitman/mdview.svg)](https://build.snapcraft.io/user/mapitman/mdview)
+
 Formats markdown and launches it in a browser.
 
 ## Install
