@@ -5,7 +5,7 @@
   description: |
     Command line tool to view a markdown file in your default web browser.
     Type `mdview --help` for options. https://github.com/mapitman/mdview
-  grade: devel
+  grade: candidate
   confinement: strict
 
   apps:
