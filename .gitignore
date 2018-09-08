@@ -6,5 +6,6 @@ freebsd-amd64.tar.gz
 linux-amd64.tar.gz
 windows-amd64.zip
 prime/
+parts/
 .snapcraft
 *.snap
