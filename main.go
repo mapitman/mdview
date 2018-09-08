@@ -59,7 +59,14 @@ func main() {
 func tempFileName(prefix, suffix string) string {
 	randBytes := make([]byte, 16)
 	rand.Read(randBytes)
-	return filepath.Join(os.TempDir(), prefix+hex.EncodeToString(randBytes)+suffix)
+	return filepath.Join(getTempDir(), prefix+hex.EncodeToString(randBytes)+suffix)
+}
+
+func getTempDir() string {
+	if os.Getenv("SNAP_USER_COMMON") != "" {
+		return os.Getenv("SNAP_USER_COMMON")
+	}
+	return os.TempDir()
 }
 
 func check(e error) {

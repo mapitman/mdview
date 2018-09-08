@@ -1,5 +1,6 @@
 SHELL=/bin/bash
-default: snap
+.PHONY: clean snap
+default: linux
 all: linux windows darwin freebsd
 
 
@@ -9,10 +10,7 @@ darwin: bin/darwin-amd64/mdview
 freebsd: bin/freebsd-amd64/mdview
 
 snap:
-	mkdir $(HOME)/go
-	GOPATH=$(HOME)/go go get github.com/golang-commonmark/markdown
-	GOPATH=$(HOME)/go go get github.com/pkg/browser
-	GOPATH=$(HOME)/go go build -o bin/snap/mdview
+	snapcraft snap
 
 bin/linux-amd64/mdview:
 	env GOOS=linux GOARCH=amd64 go build -o ./bin/linux-amd64/mdview
@@ -33,15 +31,17 @@ bin/darwin-amd64/mdview:
 bin/freebsd-amd64/mdview:
 	env GOOS=freebsd GOARCH=amd64 go build -o ./bin/freebsd-amd64/mdview
 	tar czvf freebsd-amd64.tar.gz -C bin/freebsd-amd64/ mdview
-.PHONY: clean
+
 install:
 	cp bin/snap/mdview $(DESTDIR)
 clean:
 	rm -rf ./bin
-	rm linux-amd64.tar.gz
-	rm linux-i386.tar.gz
-	rm linux-arm64.tar.gz
+	rm -f linux-amd64.tar.gz
+	rm -f linux-i386.tar.gz
+	rm -f linux-arm64.tar.gz
 
-	rm freebsd-amd64.tar.gz
-	rm darwin-amd64.tar.gz
-	rm windows-amd64.zip
+	rm -f freebsd-amd64.tar.gz
+	rm -f darwin-amd64.tar.gz
+	rm -f windows-amd64.zip
+
+	snapcraft clean mdview -s pull

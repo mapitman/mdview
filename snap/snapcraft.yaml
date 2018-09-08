@@ -1,20 +1,20 @@
 
   name: mdview
-  version: '1.0' # just for humans, typically '1.2+git' or '1.3.2'
+  version: '1.0'
   summary: View markdown files in a browser from the command line.
   description: |
     Command line tool to view a markdown file in your default web browser.
-    Type `mdview --help` for options.
-  grade: devel # must be 'stable' to release into candidate/stable channels
-  confinement: classic # use 'strict' once you have the right plugs and slots
+    Type `mdview --help` for options. https://github.com/mapitman/mdview
+  grade: devel
+  confinement: strict
 
   apps:
       mdview:
         command: mdview
+        plugs: [home]
   parts:
     mdview:
       build-packages: [golang]
-      # See 'snapcraft plugins'
-      plugin: make
+      plugin: go
 
   
