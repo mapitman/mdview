@@ -1,2 +1,3 @@
 [Desktop Entry]
-	Name=Markdown View
+Name=Markdown View
+Exec=mdview
