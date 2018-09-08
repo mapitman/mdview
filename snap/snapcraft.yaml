@@ -11,10 +11,8 @@
   apps:
       mdview:
         command: mdview
-        plugs: [home]
+        plugs: [home,unity7]
   parts:
     mdview:
       build-packages: [golang]
       plugin: go
-
-  
