@@ -13,6 +13,8 @@
         command: mdview
         plugs: [home,unity7]
   parts:
+    go:
+      source-tag: go1.8
     mdview:
-      build-packages: [golang]
       plugin: go
+      after: [go]
