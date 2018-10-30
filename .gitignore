@@ -1,10 +1,10 @@
-bin/
+bin/*
 mdview
 mdview.exe
-darwin-amd64.tar.gz
+*.tar.gz
 freebsd-amd64.tar.gz
 linux-amd64.tar.gz
-windows-amd64.zip
+*.zip
 prime/
 parts/
 .snapcraft
