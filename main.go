@@ -13,7 +13,7 @@ import (
 	"github.com/pkg/browser"
 )
 
-const appVersion = "1.0.0"
+const appVersion = "1.1.0"
 
 func main() {
 	var outfilePtr = flag.String("o", "", "Output filename. (Optional)")
