@@ -1,3 +1,4 @@
 [Desktop Entry]
 Name=Markdown View
 Exec=mdview
+MimeType=text/markdown
