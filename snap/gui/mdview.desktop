@@ -1,4 +1,8 @@
 [Desktop Entry]
+Type=Application
 Name=Markdown View
-Exec=mdview
+Comment=View markdown files in a browser from the command line.
+Exec=mdview %f
+Icon=text-markdown
 MimeType=text/markdown
+NoDisplay=true
