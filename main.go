@@ -8,8 +8,9 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strings"
 
-	"github.com/golang-commonmark/markdown"
+	"gitlab.com/golang-commonmark/markdown"
 	"github.com/pkg/browser"
 )
 
@@ -38,8 +39,15 @@ func main() {
 	dat, err := ioutil.ReadFile(inputFilename)
 	check(err)
 
-	md := markdown.New(markdown.XHTMLOutput(true), markdown.Nofollow(true))
-	html := md.RenderToString([]byte(dat))
+	md := markdown.New(
+		markdown.XHTMLOutput(true),
+		markdown.Nofollow(true),
+		markdown.Tables(true),
+		markdown.Typographer(true))
+
+	markdownTokens := md.Parse(dat)
+	html := md.RenderTokensToString(markdownTokens)
+	title := getTitle(markdownTokens)
 
 	outfilePath := *outfilePtr
 	if outfilePath == "" {
@@ -49,7 +57,7 @@ func main() {
 	f, err := os.Create(outfilePath)
 	check(err)
 	defer f.Close()
-	_, err = fmt.Fprintf(f, template, style, html)
+	_, err = fmt.Fprintf(f, template, style, title, html)
 	check(err)
 	f.Sync()
 	err = browser.OpenFile(outfilePath)
@@ -75,7 +83,41 @@ func check(e error) {
 	}
 }
 
-const template = "<!DOCTYPE html><html><head><style>%s</style></head><body class=\"markdown-body\">%s</body></html>"
+func getTitle(tokens []markdown.Token) string {
+	var result string
+	if len(tokens) > 0 {
+		for i := 0; i < len(tokens); i++ {
+			if topLevelHeading, ok := tokens[i].(*markdown.HeadingOpen); ok {
+				for j := i+1; j < len(tokens); j++ {
+					if token, ok := tokens[j].(*markdown.HeadingClose); ok && token.Lvl == topLevelHeading.Lvl {
+						break
+					}
+					result += getText(tokens[j])
+				}
+				result = strings.TrimSpace(result)
+				break
+			}
+		}
+	}
+	return result
+}
+
+func getText(token markdown.Token) string {
+	switch token := token.(type) {
+	case *markdown.Text:
+		return token.Content
+	case *markdown.Inline:
+		result := ""
+		for _, token := range token.Children {
+			result += getText(token)
+		}
+		return result
+	}
+	return ""
+
+}
+
+const template = "<!DOCTYPE html><html><head><style>%s</style><title>%s</title></head><body class=\"markdown-body\">%s</body></html>"
 
 const style = `.markdown-body {box-sizing: border-box;min-width: 200px;max-width:
 	 	980px;margin: 0 auto;padding: 45px;}	@media (max-width: 767px) {.markdown-body
