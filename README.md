@@ -21,7 +21,7 @@ go get github.com/mapitman/mdview
 
 Don't have Golang? [Get it now](https://golang.org/doc/install).
 
-Otherwise, grab the correct binary [here](https://github.com/mapitman/mdview/releases/tag/1.0.0).
+Otherwise, grab the correct binary [here](https://github.com/mapitman/mdview/releases/).
 
 
 ## Usage
