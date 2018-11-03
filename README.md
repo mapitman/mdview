@@ -12,10 +12,14 @@ On Linux, you can install [mdview](https://snapcraft.io/mdview) from the snap st
 sudo snap install mdview
 ```
 
-If you have Go installed...
+Don't have snapd? [Get set up for snaps](https://docs.snapcraft.io/core/install).
+
+If you have Golang installed...
 ```sh
 go get github.com/mapitman/mdview
 ```
+
+Don't have Golang? [Get it now](https://golang.org/doc/install).
 
 Otherwise, grab the correct binary [here](https://github.com/mapitman/mdview/releases/tag/1.0.0).
 
