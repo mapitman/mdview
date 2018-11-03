@@ -2,11 +2,8 @@
 1.2.0 / 2018-11-02
 ==================
 
-  * Bump app version
-  * Bump snap version
   * Merge pull request #5 from eaglersdeveloper/opening-from-file-manager
   * Add more information to desktop file
-  * Bump snap version
   * update gitignore
 
 1.1.0 / 2018-10-30
@@ -38,7 +35,6 @@
   * Update snapcraft.yaml
   * Create binary archive files as part of build
   * Update README
-  * Initial commit
 
 1.0.0 / 2018-08-25
 ==================
