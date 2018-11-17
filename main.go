@@ -10,8 +10,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"gitlab.com/golang-commonmark/markdown"
 	"github.com/pkg/browser"
+	"gitlab.com/golang-commonmark/markdown"
 )
 
 const appVersion = "1.3.0"
@@ -20,8 +20,11 @@ func main() {
 	var outfilePtr = flag.String("o", "", "Output filename. (Optional)")
 	var versionPtr = flag.Bool("version", false, "Prints mdview version.")
 	var helpPtr = flag.Bool("help", false, "Prints mdview help message.")
+	var barePtr = flag.Bool("bare", false, "Bare HTML with no style applied.")
 	flag.BoolVar(versionPtr, "v", false, "Prints mdview version.")
 	flag.BoolVar(helpPtr, "h", false, "Prints mdview help message.")
+	flag.BoolVar(barePtr, "b", false, "Bare HTML with no style applied.")
+
 	flag.Parse()
 	inputFilename := flag.Arg(0)
 
@@ -57,7 +60,11 @@ func main() {
 	f, err := os.Create(outfilePath)
 	check(err)
 	defer f.Close()
-	_, err = fmt.Fprintf(f, template, style, title, html)
+	actualStyle := style
+	if *barePtr {
+		actualStyle = ""
+	}
+	_, err = fmt.Fprintf(f, template, actualStyle, title, html)
 	check(err)
 	f.Sync()
 	err = browser.OpenFile(outfilePath)
@@ -88,7 +95,7 @@ func getTitle(tokens []markdown.Token) string {
 	if len(tokens) > 0 {
 		for i := 0; i < len(tokens); i++ {
 			if topLevelHeading, ok := tokens[i].(*markdown.HeadingOpen); ok {
-				for j := i+1; j < len(tokens); j++ {
+				for j := i + 1; j < len(tokens); j++ {
 					if token, ok := tokens[j].(*markdown.HeadingClose); ok && token.Lvl == topLevelHeading.Lvl {
 						break
 					}
@@ -117,7 +124,7 @@ func getText(token markdown.Token) string {
 
 }
 
-const template = "<!DOCTYPE html><html><head><style>%s</style><title>%s</title></head><body class=\"markdown-body\">%s</body></html>"
+const template = "<!DOCTYPE html><html><head><meta http-equiv=\"content-type\" content=\"text/html; charset=utf-8\"> <style>%s</style><title>%s</title></head><body class=\"markdown-body\">%s</body></html>"
 
 const style = `.markdown-body {box-sizing: border-box;min-width: 200px;max-width:
 	 	980px;margin: 0 auto;padding: 45px;}	@media (max-width: 767px) {.markdown-body
