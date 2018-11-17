@@ -27,8 +27,12 @@ Otherwise, grab the correct binary [here](https://github.com/mapitman/mdview/rel
 ## Usage
 
 ```text
+Usage:
 mdview [options] <filename>
 Formats markdown and launches it in a browser.
+  -b    Bare HTML with no style applied.
+  -bare
+        Bare HTML with no style applied.
   -h    Prints mdview help message.
   -help
         Prints mdview help message.
@@ -39,5 +43,5 @@ Formats markdown and launches it in a browser.
         Prints mdview version.
 ```
 
-If you do not supply an output file, mdview will write a file to your 
+If you do not supply an output file, mdview will write a file to your
 operating system's default temp directory.
