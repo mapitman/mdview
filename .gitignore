@@ -9,3 +9,4 @@ prime/
 parts/
 .snapcraft
 *.snap
+go.sum

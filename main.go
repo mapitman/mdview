@@ -14,7 +14,7 @@ import (
 	"gitlab.com/golang-commonmark/markdown"
 )
 
-const appVersion = "1.3.0"
+const appVersion = "1.4.0"
 
 func main() {
 	var outfilePtr = flag.String("o", "", "Output filename. (Optional)")
@@ -79,7 +79,12 @@ func tempFileName(prefix, suffix string) string {
 
 func getTempDir() string {
 	if os.Getenv("SNAP_USER_COMMON") != "" {
-		return os.Getenv("SNAP_USER_COMMON")
+		var tmpdir = os.Getenv("HOME") + "/mdview-temp"
+		if _, err := os.Stat(tmpdir); os.IsNotExist(err) {
+			err = os.Mkdir(tmpdir, 0700)
+			check(err)
+		}
+		return tmpdir
 	}
 	return os.TempDir()
 }

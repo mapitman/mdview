@@ -4,7 +4,6 @@ VERSION := $(shell git describe --tags --abbrev=0)
 default: linux
 all: linux windows darwin freebsd
 
-
 linux: bin/linux-amd64/mdview bin/linux-arm64/mdview bin/linux-i386/mdview
 windows: bin/windows-amd64/mdview.exe
 darwin: bin/darwin-amd64/mdview
