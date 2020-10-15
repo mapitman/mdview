@@ -1,0 +1,10 @@
+Package: mdview
+Version: 1.4.0
+Section: custom
+Priority: optional
+Architecture: all
+Essential: no
+Installed-Size: 4096
+Maintainer: bugzapperlabs.com
+Description: Markdown View - Command line utility to format markdown and launch it in a browser.
+
