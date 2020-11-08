@@ -6,6 +6,14 @@ Formats markdown and launches it in a browser.
 
 ## Installation
 
+### Arch Linux (and derivatives)
+
+Mdview is now available in the [AUR](https://aur.archlinux.org/packages/mdview/)  
+If you have an AUR helper like `yay`, installing is as easy as:
+```
+yay -S mdview
+```
+
 ### Debian Package
 
 If you're running Debian or a derivative like Ubuntu or Pop!_OS,
