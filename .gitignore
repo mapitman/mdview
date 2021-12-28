@@ -9,7 +9,6 @@ prime/
 parts/
 .snapcraft
 *.snap
-go.sum
 package/*
 *.deb
 mdview.1
