@@ -1,5 +1,5 @@
 Package: mdview
-Version: 1.4.0
+Version: VERSION
 Section: custom
 Priority: optional
 Architecture: all
