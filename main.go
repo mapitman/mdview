@@ -67,6 +67,8 @@ func main() {
 	_, err = fmt.Fprintf(f, template, actualStyle, title, html)
 	check(err)
 	f.Sync()
+	browser.Stderr = nil
+	browser.Stdout = nil
 	err = browser.OpenFile(outfilePath)
 	check(err)
 }
