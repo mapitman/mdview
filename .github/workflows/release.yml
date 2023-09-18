@@ -1,0 +1,115 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - '*'
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: 'Get Previous tag'
+        id: previoustag
+        uses: "WyriHaximus/github-action-get-previous-tag@v1"
+      - name: Setup tools
+        run: sudo apt-get install pandoc
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.20'
+      - name: Build
+        run: |
+          VERSION="${{ steps.previoustag.outputs.tag }}" make all
+          VERSION="${{ steps.previoustag.outputs.tag }}" make deb
+      - name: Release
+        uses: actions/create-release@v1
+        id: create_release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          draft: false
+          prerelease: false
+          release_name: ${{ steps.previoustag.outputs.tag }}
+          tag_name: ${{ steps.previoustag.outputs.tag }}
+      - name: upload linux amd64 artifact
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./mdview-${{ steps.previoustag.outputs.tag }}-linux-amd64.tar.gz
+          asset_name: mdview-${{ steps.previoustag.outputs.tag }}-linux-amd64.tar.gz
+          asset_content_type: application/gzip
+      - name: upload linux i386 artifact
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./mdview-${{ steps.previoustag.outputs.tag }}-linux-i386.tar.gz
+          asset_name: mdview-${{ steps.previoustag.outputs.tag }}-linux-i386.tar.gz
+          asset_content_type: application/gzip
+      - name: upload linux arm64 artifact
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./mdview-${{ steps.previoustag.outputs.tag }}-linux-arm64.tar.gz
+          asset_name: mdview-${{ steps.previoustag.outputs.tag }}-linux-arm64.tar.gz
+          asset_content_type: application/gzip
+      - name: upload darwin amd64 artifact
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./mdview-${{ steps.previoustag.outputs.tag }}-darwin-amd64.tar.gz
+          asset_name: mdview-${{ steps.previoustag.outputs.tag }}-darwin-amd64.tar.gz
+          asset_content_type: application/gzip
+      - name: upload darwin arm64 artifact
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./mdview-${{ steps.previoustag.outputs.tag }}-darwin-arm64.tar.gz
+          asset_name: mdview-${{ steps.previoustag.outputs.tag }}-darwin-arm64.tar.gz
+          asset_content_type: application/gzip
+      - name: upload windows amd64 artifact
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./mdview-${{ steps.previoustag.outputs.tag }}-windows-amd64.zip
+          asset_name: mdview-${{ steps.previoustag.outputs.tag }}-windows-amd64.zip
+          asset_content_type: application/zip
+      - name: upload freebsd amd64 artifact
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./mdview-${{ steps.previoustag.outputs.tag }}-freebsd-amd64.tar.gz
+          asset_name: mdview-${{ steps.previoustag.outputs.tag }}-freebsd-amd64.tar.gz
+          asset_content_type: application/gzip
+      - name: upload linux amd64 deb
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./mdview_${{ steps.previoustag.outputs.tag }}_amd64.deb
+          asset_name: mdview_${{ steps.previoustag.outputs.tag }}_amd64.deb
+          asset_content_type: application/vnd.debian.binary-package
+      - name: upload linux arm64 deb
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./mdview_${{ steps.previoustag.outputs.tag }}_arm64.deb
+          asset_name: mdview_${{ steps.previoustag.outputs.tag }}_arm64.deb
+          asset_content_type: application/vnd.debian.binary-package

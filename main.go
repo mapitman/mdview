@@ -14,7 +14,7 @@ import (
 	"gitlab.com/golang-commonmark/markdown"
 )
 
-const appVersion = "1.4.0"
+var appVersion string
 
 func main() {
 	var outfilePtr = flag.String("o", "", "Output filename. (Optional)")
