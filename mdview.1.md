@@ -12,7 +12,9 @@
 # DESCRIPTION
 
 Formats a markdown file as HTML, writes it to a temporary file and
-then launches that file in the default web browser.
+then launches that file in the default web browser. By default, it will
+use the operating system's default temporary directory unless the
+environment variable MDVIEW_DIR is set.
 
 ## Options
 

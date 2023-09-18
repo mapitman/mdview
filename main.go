@@ -34,7 +34,7 @@ func main() {
 	}
 
 	if inputFilename == "" || *helpPtr {
-		os.Stderr.WriteString("Usage:\nmdview [options] <filename>\nFormats markdown and launches it in a browser.\n")
+		os.Stderr.WriteString("Usage:\nmdview [options] <filename>\nFormats markdown and launches it in a browser.\nIf the environment variable MDVIEW_DIR is set, the temporary file will be written there.\n")
 		flag.PrintDefaults()
 		os.Exit(1)
 	}
@@ -78,6 +78,16 @@ func tempFileName(prefix, suffix string) string {
 }
 
 func getTempDir() string {
+	if os.Getenv("MDVIEW_DIR") != "" {
+		var tempDir = os.Getenv(("MDVIEW_DIR"))
+		if _, err := os.Stat(tempDir); os.IsNotExist(err) {
+			err = os.Mkdir(tempDir, 0700)
+			check(err)
+		}
+
+		return tempDir
+	}
+
 	if os.Getenv("SNAP_USER_COMMON") != "" {
 		var tmpdir = os.Getenv("HOME") + "/mdview-temp"
 		if _, err := os.Stat(tmpdir); os.IsNotExist(err) {
@@ -86,6 +96,7 @@ func getTempDir() string {
 		}
 		return tmpdir
 	}
+
 	return os.TempDir()
 }
 
