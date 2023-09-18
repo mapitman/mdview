@@ -1,3 +1,15 @@
+
+1.5.0 / 2023-09-17
+==================
+
+  * Merge pull request #15 from mapitman/suppress-browser-messages
+    Suppress stderr and stdout messages from browser
+  * Merge pull request #13 from mapitman/support-env-var-for-output
+    Support reading an environment variable for the directory to
+    write to
+  * Merge pull request #11 from mapitman/add-actions
+    Add actions
+
 1.4.1 / 2021-12-28
 ==================
 
