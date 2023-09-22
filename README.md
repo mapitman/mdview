@@ -1,6 +1,6 @@
 # Markdown View
 
-[![Snap Status](https://build.snapcraft.io/badge/mapitman/mdview.svg)](https://build.snapcraft.io/user/mapitman/mdview)
+[![Build](https://github.com/mapitman/mdview/actions/workflows/build.yml/badge.svg)](https://github.com/mapitman/mdview/actions/workflows/build.yml)
 
 Formats markdown and launches it in a browser.
 
