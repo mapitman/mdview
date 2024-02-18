@@ -16,14 +16,20 @@ yay -S mdview
 
 ### Debian Package
 
-If you're running Debian or a derivative like Ubuntu or Pop!_OS,
-download the deb package for the release you'd like to install form the
-[Releases](https://github.com/mapitman/mdview/releases) page.
-Install with `dpkg -i`
+If you're running Debian or a derivative like Ubuntu or Pop!_OS, you can
+use [deb-get](https://github.com/wimpysworld/deb-get) to install mdview.
 
 ```sh
-curl -O https://github.com/mapitman/mdview/releases/download/1.4.0/mdview-1.4.0_amd64.deb
-sudo dpkg --install mdview-1.4.0_amd64.deb
+deb-get install mdview
+```
+
+If you don't want to use `deb-get`, you can download the package and
+manually install it from the
+[Releases](https://github.com/mapitman/mdview/releases) page.
+
+```sh
+curl -L -O https://github.com/mapitman/mdview/releases/download/1.5.0/mdview_1.5.0_amd64.deb
+sudo dpkg --install mdview_1.5.0_amd64.deb
 ```
 
 To remove the package:
@@ -34,9 +40,7 @@ sudo dpkg --remove mdview
 
 ### Snap Package
 
-_Update 2023-09-17_: I can't really recommend this method of installation
-as it is cumbersome. Also, the Snap build seems to be broken and I don't
-really know what to do to fix it!
+_Note: I'm working on getting the snap package build fixed._
 
 On Linux, you can install [mdview](https://snapcraft.io/mdview) from the snap store. This option is only viable if the files
 you want to view are in your home directory. If you need to view
