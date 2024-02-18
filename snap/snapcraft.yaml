@@ -1,25 +1,32 @@
 
 name: mdview
-version: '1.4.0'
+version: git
 summary: View markdown files in a browser from the command line.
 description: |
   Command line tool to view a markdown file in your default web browser.
   Type `mdview --help` for options. https://github.com/mapitman/mdview
 grade: stable
 confinement: strict
-base: core18
+base: core22
 apps:
     mdview:
       command: bin/mdview
       plugs: [home,unity7]
       environment:
         HOME: /home/$USER
+adopt-info: mdview
 parts:
   mdview:
+    override-pull: |
+      craftctl default
+      craftctl set version=$(git describe --tags --abbrev=10)
     plugin: go
     source: .
-    # source-type: git
+    source-type: git
     build-packages:
       - gcc
       - gcc-multilib
       - libblkid-dev
+    build-snaps:
+      - go
+

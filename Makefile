@@ -34,7 +34,7 @@ deb/linux-arm64: bin/linux-arm64/mdview
 	mv package.deb mdview_$(VERSION)_arm64.deb
 
 snap:
-	snapcraft snap
+	snapcraft pack
 
 bin/linux-amd64/mdview: manpage
 	env GOOS=linux GOARCH=amd64 go build -ldflags "-X main.appVersion=$(VERSION)" -o ./bin/linux-amd64/mdview
