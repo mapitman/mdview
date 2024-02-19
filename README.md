@@ -4,6 +4,48 @@
 
 Formats markdown and launches it in a browser.
 
+## Usage
+
+By default, `mdview` tries to use your operating system's temporary
+directory to write HTML files to. If that doesn't work for you, you can
+set an environment variable that it will use instead. For example, on
+Ubuntu Linux, Firefox is packaged as a Snap and is unable to read from
+`/tmp`. I get around this by setting `MDVIEW_DIR` like so:
+
+```sh
+export MDVIEW_DIR=$HOME/snap/firefox/mdview
+```
+
+
+```text
+Usage:
+mdview [options] <filename>
+Formats markdown and launches it in a browser.
+If the environment variable MDVIEW_DIR is set, the temporary file will be written there.
+  -b Bare HTML with no style applied.
+  -bare
+     Bare HTML with no style applied.
+  -h Prints mdview help message.
+  -help
+     Prints mdview help message.
+  -o string
+     Output filename. (Optional)
+  -v Prints mdview version.
+  -version
+     Prints mdview version.
+
+```
+
+If you do not supply an output file, mdview will write a file to your
+operating system's default temp directory or to the value of MDVIEW_DIR.
+
+The generated HTML will conform to your system's light or dark theme
+setting, as long as your browser supports that feature.
+
+### Thanks
+
+Thanks to [sindresorhus](https://github.com/sindresorhus/github-markdown-css) for the GitHub style css.
+
 ## Installation
 
 ### Arch Linux (and derivatives)
@@ -57,7 +99,8 @@ alternate installation method.
 sudo snap install mdview
 ```
 
-Don't have snapd? [Get set up for snaps](https://docs.snapcraft.io/core/install).
+Don't have snapd?  
+[Get set up for snaps](https://docs.snapcraft.io/core/install).
 
 ### Manual Download and Install
 
@@ -73,35 +116,4 @@ go get github.com/mapitman/mdview
 
 Don't have Golang? [Get it now](https://golang.org/doc/install).
 
-## Usage
 
-By default, `mdview` tries to use your operating system's temporary
-directory. To write HTML files to. If that doesn't work for you, you can
-set an environment variable that it will use instead. For example, on
-Ubuntu Linux, Firefox is packaged as a Snap and is unable to read from
-`/tmp`. I get around this by setting `MDVIEW_DIR` like so:
-
-```sh
-export MDVIEW_DIR=$HOME/snap/firefox/mdview
-```
-
-
-```text
-Usage:
-mdview [options] <filename>
-Formats markdown and launches it in a browser.
-  -b    Bare HTML with no style applied.
-  -bare
-        Bare HTML with no style applied.
-  -h    Prints mdview help message.
-  -help
-        Prints mdview help message.
-  -o string
-        Output filename. (Optional)
-  -v    Prints mdview version.
-  -version
-        Prints mdview version.
-```
-
-If you do not supply an output file, mdview will write a file to your
-operating system's default temp directory or to the value of MDVIEW_DIR.

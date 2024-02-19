@@ -23,10 +23,16 @@ parts:
     plugin: go
     source: .
     source-type: git
-    build-packages:
-      - gcc
-      - gcc-multilib
-      - libblkid-dev
+    # build-packages:
+    #   - gcc
+    #   - gcc-multilib
+    #   - libblkid-dev
     build-snaps:
       - go
-
+architectures:
+  - build-on: [amd64]
+    build-for: [amd64]
+  - build-on: [arm64]
+    build-for: [arm64]
+  - build-on: [armhf]
+    build-for: [armhf]
