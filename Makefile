@@ -76,7 +76,8 @@ clean:
 	rm -f *.tar.gz
 	rm -f *.zip
 	rm -f *.deb
-	rm mdview.1
+	rm -f mdview.1
+	rm -f *.snap
 
 	# snapcraft clean mdview -s pull
 
