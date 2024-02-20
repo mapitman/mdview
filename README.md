@@ -13,7 +13,7 @@ Ubuntu Linux, Firefox is packaged as a Snap and is unable to read from
 `/tmp`. I get around this by setting `MDVIEW_DIR` like so:
 
 ```sh
-export MDVIEW_DIR=$HOME/snap/firefox/mdview
+export MDVIEW_DIR=$HOME/mdview-temp
 ```
 
 
