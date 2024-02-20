@@ -49,7 +49,7 @@ func main() {
 	check(err)
 
 	md := markdown.New(
-		markdown.XHTMLOutput(true),
+		markdown.HTML(true),
 		markdown.Nofollow(true),
 		markdown.Tables(true),
 		markdown.Typographer(true))
