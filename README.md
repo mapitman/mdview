@@ -82,7 +82,7 @@ sudo dpkg --remove mdview
 
 ### Snap Package
 
-_Note: I'm working on getting the snap package build fixed._
+_Update: The snap package has been fixed and the latest version is now available as a snap._ 🥳
 
 On Linux, you can install [mdview](https://snapcraft.io/mdview) from the snap store. This option is only viable if the files
 you want to view are in your home directory. If you need to view
