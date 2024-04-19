@@ -69,12 +69,12 @@ If you don't want to use `deb-get`, you can download the package and
 manually install it from the
 [Releases](https://github.com/mapitman/mdview/releases) page.
 
-```properties
+```sh
 curl -s https://api.github.com/repos/mapitman/mdview/releases/latest \
 | grep "browser_download_url.*amd64.deb" \
 | cut -d '"' -f 4 \
-| xargs curl -L -o mdview_last_amd64.deb
-sudo dpkg --install mdview_last_amd64.deb
+| xargs curl -L -o mdview_lastest_amd64.deb
+sudo dpkg --install mdview_lastest_amd64.deb
 ```
 
 To remove the package:
