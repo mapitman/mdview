@@ -18,7 +18,7 @@ adopt-info: mdview
 parts:
   mdview:
     override-pull: |
-      craftctl pull
+      craftctl default
       craftctl set VERSION=$(git describe  --tags | sed 's/-.*//')
     plugin: go
     source: .
