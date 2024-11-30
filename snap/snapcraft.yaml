@@ -18,15 +18,11 @@ adopt-info: mdview
 parts:
   mdview:
     override-pull: |
-      craftctl default
-      craftctl set version=$(git describe --tags --abbrev=10)
+      craftctl pull
+      craftctl set VERSION=$(git describe  --tags | sed 's/-.*//')
     plugin: go
     source: .
     source-type: git
-    # build-packages:
-    #   - gcc
-    #   - gcc-multilib
-    #   - libblkid-dev
     build-snaps:
       - go
 architectures:

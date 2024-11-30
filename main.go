@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"flag"
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -99,7 +100,7 @@ func getTempDir() string {
 		return tempDir
 	}
 
-	if os.Getenv("SNAP_USER_COMMON") != "" {
+	if isSnap() {
 		var tmpdir = os.Getenv("HOME") + "/mdview-temp"
 		if _, err := os.Stat(tmpdir); os.IsNotExist(err) {
 			err = os.Mkdir(tmpdir, 0700)
@@ -113,7 +114,16 @@ func getTempDir() string {
 
 func check(e error) {
 	if e != nil {
-		panic(e)
+		if os.IsPermission(e) {
+			fmt.Println("There was a permission error accessing the file.")
+			if isSnap() {
+				fmt.Println("Since mdview was installed as a Snap, it can only access files in your HOME directory.")
+				fmt.Println("If you need to use it with files outside of your HOME directory, choose a different installation method.")
+				fmt.Println("https://github.com/mapitman/mdview?tab=readme-ov-file#installation\n")
+			}
+		}
+
+		log.Fatal(e)
 	}
 }
 
@@ -149,4 +159,8 @@ func getText(token markdown.Token) string {
 	}
 	return ""
 
+}
+
+func isSnap() bool {
+	return os.Getenv("SNAP_USER_COMMON") != ""
 }
