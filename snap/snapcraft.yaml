@@ -19,10 +19,12 @@ parts:
   mdview:
     override-pull: |
       craftctl default
-      craftctl set VERSION=$(git describe  --tags | sed 's/-.*//')
+      craftctl set version=$(git describe  --tags | sed 's/-.*//')
     plugin: go
     source: .
     source-type: git
+    environment:
+      VERSION: $(git describe  --tags | sed 's/-.*//')
     build-snaps:
       - go
 architectures:
