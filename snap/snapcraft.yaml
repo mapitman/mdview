@@ -17,14 +17,14 @@ apps:
 adopt-info: mdview
 parts:
   mdview:
+    environment:
+      VERSION: $(git describe  --tags | sed 's/-.*//')
     override-pull: |
       craftctl default
       craftctl set version=$(git describe  --tags | sed 's/-.*//')
     plugin: go
     source: .
     source-type: git
-    environment:
-      VERSION: $(git describe  --tags | sed 's/-.*//')
     build-snaps:
       - go
 architectures:
