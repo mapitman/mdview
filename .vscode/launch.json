@@ -10,8 +10,8 @@
             "request": "launch",
             "mode": "auto",
             "program": "${workspaceFolder}",
-            "env": {},
-            "args": ["README.md"]
+            "env": {"SNAP_USER_COMMON": "mark"},
+            "args": ["bad-perms.md"]
         }
     ]
 }
