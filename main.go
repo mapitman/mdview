@@ -4,8 +4,10 @@ import (
 	"crypto/rand"
 	_ "embed"
 	"encoding/hex"
+	"errors"
 	"flag"
 	"fmt"
+	"io/fs"
 	"log"
 	"os"
 	"path/filepath"
@@ -114,13 +116,18 @@ func getTempDir() string {
 
 func check(e error) {
 	if e != nil {
-		if os.IsPermission(e) {
+		if errors.Is(e, fs.ErrPermission) {
 			fmt.Println("There was a permission error accessing the file.")
-			if isSnap() {
-				fmt.Println("Since mdview was installed as a Snap, it can only access files in your HOME directory.")
-				fmt.Println("If you need to use it with files outside of your HOME directory, choose a different installation method.")
-				fmt.Println("https://github.com/mapitman/mdview?tab=readme-ov-file#installation\n")
-			}
+		}
+
+		if errors.Is(e, fs.ErrNotExist) {
+			fmt.Println("mdview was unable to find the file.")
+		}
+
+		if isSnap() {
+			fmt.Println("Since mdview was installed as a Snap, it can only access files in your HOME directory.")
+			fmt.Println("If you need to use it with files outside of your HOME directory, choose a different installation method.")
+			fmt.Println("https://github.com/mapitman/mdview?tab=readme-ov-file#installation\n")
 		}
 
 		log.Fatal(e)
@@ -143,6 +150,7 @@ func getTitle(tokens []markdown.Token) string {
 			}
 		}
 	}
+	
 	return result
 }
 
