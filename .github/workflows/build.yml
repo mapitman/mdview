@@ -39,7 +39,7 @@ jobs:
         id: determine_version
         run: |
           # For manual runs we allow an explicit version input, otherwise use the ref name
-          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ] && [ -n "${{ github.event.inputs.version }}" ]; then
             VERSION="${{ github.event.inputs.version }}"
           else
             VERSION="${{ github.ref_name }}"
