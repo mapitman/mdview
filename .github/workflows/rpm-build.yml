@@ -30,6 +30,9 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Mark workspace as safe for Git
+        run: git config --global --add safe.directory "${GITHUB_WORKSPACE}"
+
       - name: Determine version
         id: version
         run: |
@@ -48,7 +51,6 @@ jobs:
 
       - name: Build RPM package
         run: |
-          git config --global --add safe.directory /__w/mdview/mdview
           VERSION=${{ steps.version.outputs.VERSION }} make rpm
 
       - name: Copy RPMs to workspace
