@@ -45,11 +45,11 @@ jobs:
       - name: Show chosen version
         run: |
           echo "Resolved VERSION=${{ steps.version.outputs.VERSION }}"
-      - name: Mark repo as safe for git
-        run: git config --global --add safe.directory /__w/mdview/mdview
 
       - name: Build RPM package
-        run: VERSION=${{ steps.version.outputs.VERSION }} make rpm
+        run: |
+          git config --global --add safe.directory /__w/mdview/mdview
+          VERSION=${{ steps.version.outputs.VERSION }} make rpm
 
       - name: Copy RPMs to workspace
         run: |
