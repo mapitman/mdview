@@ -1,6 +1,6 @@
 MANSECTION ?= 1
 SHELL=/bin/bash
-.PHONY: clean snap
+.PHONY: clean snap rpm rpm-setup
 default: linux
 all: linux windows darwin freebsd
 
@@ -83,3 +83,27 @@ clean:
 
 manpage:
 	pandoc --standalone --to man mdview.1.md -o mdview.1
+
+# RPM Packaging targets
+rpm-setup:
+	@mkdir -p $(HOME)/rpmbuild/{BUILD,RPMS,SOURCES,SPECS,SRPMS}
+	@echo '%_topdir %{getenv:HOME}/rpmbuild' > $(HOME)/.rpmmacros
+
+rpm: rpm-setup manpage bin/linux-amd64/mdview
+	@echo "Building RPM for version $(VERSION)"
+	@mkdir -p $(HOME)/rpmbuild/SOURCES
+	@mkdir -p $(HOME)/rpmbuild/SPECS
+	git archive --prefix=mdview-$(VERSION)/ -o $(HOME)/rpmbuild/SOURCES/mdview-$(VERSION).tar.gz HEAD
+	cp mdview.spec $(HOME)/rpmbuild/SPECS/
+	rpmbuild -ba -D '_version $(VERSION)' $(HOME)/rpmbuild/SPECS/mdview.spec
+	@echo "RPM build complete. Output in $(HOME)/rpmbuild/RPMS/"
+
+rpm-local: rpm
+	@mkdir -p dist
+	cp $(HOME)/rpmbuild/RPMS/x86_64/mdview-$(VERSION)-*.x86_64.rpm dist/ 2>/dev/null || true
+	cp $(HOME)/rpmbuild/SRPMS/mdview-$(VERSION)-*.src.rpm dist/ 2>/dev/null || true
+	@ls -lh dist/mdview-$(VERSION)-*.rpm 2>/dev/null || echo "No RPMs found in dist/"
+
+rpm-clean:
+	rm -rf $(HOME)/rpmbuild
+	rm -rf dist/mdview-*.rpm

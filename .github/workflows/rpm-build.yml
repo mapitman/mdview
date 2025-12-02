@@ -1,0 +1,68 @@
+name: Build RPM Packages
+
+on:
+  push:
+    tags:
+      - '*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to build (e.g., v1.0.0)'
+        required: true
+
+jobs:
+  build-rpm:
+    runs-on: ubuntu-latest
+    container:
+      image: fedora:latest
+    steps:
+      - name: Install dependencies
+        run: |
+          dnf install -y \
+            rpm-build \
+            golang \
+            pandoc \
+            make \
+            git \
+            tar \
+            gzip
+
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Determine version
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            VERSION="${{ github.event.inputs.version }}"
+          else
+            VERSION="${{ github.ref_name }}"
+          fi
+          # Remove leading 'v' if present
+          VERSION="${VERSION#v}"
+          echo "VERSION=${VERSION}" >> $GITHUB_OUTPUT
+
+      - name: Build RPM package
+        run: VERSION=${{ steps.version.outputs.VERSION }} make rpm
+
+      - name: Copy RPMs to workspace
+        run: |
+          mkdir -p dist
+          cp ${HOME}/rpmbuild/RPMS/x86_64/mdview-*.x86_64.rpm dist/ || true
+          cp ${HOME}/rpmbuild/SRPMS/mdview-*.src.rpm dist/ || true
+          ls -lh dist/
+
+      - name: Upload RPM artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: rpm-packages-${{ steps.version.outputs.VERSION }}
+          path: dist/mdview-*.rpm
+          if-no-files-found: ignore
+
+      - name: Upload release assets (on tag push)
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v1
+        with:
+          files: dist/mdview-*.rpm
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
