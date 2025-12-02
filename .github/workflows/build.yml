@@ -2,6 +2,12 @@ name: Build
 
 on:
   push:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version for manual builds'
+        required: false
+        type: string
 
 jobs:
   build:
@@ -22,3 +28,40 @@ jobs:
           go-version: '1.21'
       - name: Build
         run: VERSION="${{ steps.previoustag.outputs.tag }}" make all
+
+  build-rpm:
+    runs-on: ubuntu-latest
+    outputs:
+      VERSION: ${{ steps.determine-version.outputs.VERSION }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Determine version
+        id: determine-version
+        run: |
+          # For manual runs we allow an explicit version input, otherwise use the ref name
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            VERSION="${{ github.event.inputs.version }}"
+          else
+            VERSION="${{ github.ref_name }}"
+          fi
+          # strip any leading v
+          VERSION="${VERSION#v}"
+          # Sanitize version for RPM: replace any character not in [A-Za-z0-9._] with an underscore.
+          SANITIZED_VERSION="$(echo "$VERSION" | sed 's/[^A-Za-z0-9._]/_/g')"
+          # Ensure we have a non-empty version for rpmbuild
+          if [ -z "$SANITIZED_VERSION" ]; then
+            SANITIZED_VERSION="0"
+          fi
+          echo "Resolved RPM version (sanitized)=${SANITIZED_VERSION}"
+          echo "VERSION=${SANITIZED_VERSION}" >> $GITHUB_OUTPUT
+      - name: Setup tools
+        run: sudo apt-get install pandoc
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.21'
+      - name: Build RPM
+        run: |
+          echo "Building RPM with version: ${{ steps.determine-version.outputs.VERSION }}"
+          # RPM build would go here when Makefile rpm target exists
+          # VERSION="${{ steps.determine-version.outputs.VERSION }}" make rpm
