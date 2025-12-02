@@ -31,6 +31,8 @@ jobs:
 
   build-rpm:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     outputs:
       VERSION: ${{ steps.determine_version.outputs.VERSION }}
     steps:
