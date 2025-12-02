@@ -52,6 +52,9 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Mark repo safe for git
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
       - name: Determine version
         id: version
         run: |
