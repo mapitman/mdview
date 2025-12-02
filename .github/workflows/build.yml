@@ -39,15 +39,16 @@ jobs:
         id: determine_version
         run: |
           # For manual runs we allow an explicit version input, otherwise use the ref name
-          if [ "${{ github.event_name }}" == "workflow_dispatch" ] && [ -n "${{ github.event.inputs.version }}" ]; then
-            VERSION="${{ github.event.inputs.version }}"
+          INPUT_VERSION="${{ github.event.inputs.version }}"
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ] && [ -n "$INPUT_VERSION" ]; then
+            VERSION="$INPUT_VERSION"
           else
             VERSION="${{ github.ref_name }}"
           fi
           # strip any leading v
           VERSION="${VERSION#v}"
           # Sanitize version for RPM: replace any character not in [A-Za-z0-9._] with an underscore.
-          SANITIZED_VERSION="$(echo "$VERSION" | sed 's/[^A-Za-z0-9._]/_/g')"
+          SANITIZED_VERSION="${VERSION//[^A-Za-z0-9._]/_}"
           # Ensure we have a non-empty version for rpmbuild
           if [ -z "$SANITIZED_VERSION" ]; then
             SANITIZED_VERSION="0"
