@@ -42,6 +42,10 @@ jobs:
           VERSION="${VERSION#v}"
           echo "VERSION=${VERSION}" >> $GITHUB_OUTPUT
 
+      - name: Show chosen version
+        run: |
+          echo "Resolved VERSION=${{ steps.version.outputs.VERSION }}"
+
       - name: Build RPM package
         run: VERSION=${{ steps.version.outputs.VERSION }} make rpm
 
