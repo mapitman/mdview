@@ -107,3 +107,19 @@ rpm-local: rpm
 rpm-clean:
 	rm -rf $(HOME)/rpmbuild
 	rm -rf dist/mdview-*.rpm
+
+# Docker-based CI simulation targets
+DOCKER_UBUNTU_IMAGE ?= ubuntu:24.04
+DOCKER_FEDORA_IMAGE ?= fedora:43
+
+.PHONY: ci-sim-ubuntu ci-sim-fedora ci-sim
+ci-sim-ubuntu:
+	@echo "Running Ubuntu CI simulation in Docker (image: $(DOCKER_UBUNTU_IMAGE))"
+	@tar -czf - . | docker run --rm -i -e VERSION=$(VERSION) $(DOCKER_UBUNTU_IMAGE) bash -lc "mkdir -p /workdir && tar -xzf - -C /workdir && cd /workdir && bash /workdir/scripts/ci-sim-ubuntu.sh"
+
+ci-sim-fedora:
+	@echo "Running Fedora RPM CI simulation in Docker (image: $(DOCKER_FEDORA_IMAGE))"
+	@tar -czf - . | docker run --rm -i -e VERSION=$(VERSION) $(DOCKER_FEDORA_IMAGE) bash -lc "mkdir -p /workdir && tar -xzf - -C /workdir && cd /workdir && bash /workdir/scripts/ci-sim-fedora.sh"
+
+ci-sim: ci-sim-ubuntu ci-sim-fedora
+	@echo "Docker CI simulation finished"
