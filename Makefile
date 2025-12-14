@@ -98,8 +98,8 @@ rpm: rpm-setup manpage bin/linux-amd64/mdview
 	echo "Using RPM version: $$RPM_VERSION (from $(VERSION))" ; \
 	git archive --prefix=mdview-$$RPM_VERSION/ -o $(HOME)/rpmbuild/SOURCES/mdview-$$RPM_VERSION.tar.gz HEAD ; \
 	cp mdview.spec $(HOME)/rpmbuild/SPECS/ ; \
-	rpmbuild -ba -D '_version $$RPM_VERSION' $(HOME)/rpmbuild/SPECS/mdview.spec ; \
-	@echo "RPM build complete. Output in $(HOME)/rpmbuild/RPMS/"
+	rpmbuild -ba -D "_version $$RPM_VERSION" $(HOME)/rpmbuild/SPECS/mdview.spec ; \
+	echo "RPM build complete. Output in $(HOME)/rpmbuild/RPMS/"
 
 rpm-local: rpm
 	@mkdir -p dist
