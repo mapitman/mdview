@@ -93,9 +93,12 @@ rpm: rpm-setup manpage bin/linux-amd64/mdview
 	@echo "Building RPM for version $(VERSION)"
 	@mkdir -p $(HOME)/rpmbuild/SOURCES
 	@mkdir -p $(HOME)/rpmbuild/SPECS
-	git archive --prefix=mdview-$(VERSION)/ -o $(HOME)/rpmbuild/SOURCES/mdview-$(VERSION).tar.gz HEAD
-	cp mdview.spec $(HOME)/rpmbuild/SPECS/
-	rpmbuild -ba -D '_version $(VERSION)' $(HOME)/rpmbuild/SPECS/mdview.spec
+	# sanitize VERSION for RPM (Version field cannot contain some chars like '-')
+	RPM_VERSION=$(shell echo "$(VERSION)" | sed 's/[^A-Za-z0-9.+~_:]/./g') ; \
+	echo "Using RPM version: $$RPM_VERSION (from $(VERSION))" ; \
+	git archive --prefix=mdview-$$RPM_VERSION/ -o $(HOME)/rpmbuild/SOURCES/mdview-$$RPM_VERSION.tar.gz HEAD ; \
+	cp mdview.spec $(HOME)/rpmbuild/SPECS/ ; \
+	rpmbuild -ba -D '_version $$RPM_VERSION' $(HOME)/rpmbuild/SPECS/mdview.spec ; \
 	@echo "RPM build complete. Output in $(HOME)/rpmbuild/RPMS/"
 
 rpm-local: rpm
