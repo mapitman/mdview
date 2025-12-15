@@ -36,19 +36,33 @@ EOF
 }
 
 check_dependencies() {
-    local deps=("rpm-build" "go" "pandoc" "make" "git")
-    local missing=()
+    # Command name -> Package name mapping for Fedora
+    declare -A deps=(
+        ["rpmbuild"]="rpm-build"
+        ["go"]="golang"
+        ["pandoc"]="pandoc"
+        ["make"]="make"
+        ["git"]="git"
+    )
+    local missing_cmds=()
+    local missing_pkgs=()
     
-    for dep in "${deps[@]}"; do
-        if ! command -v "$dep" &> /dev/null; then
-            missing+=("$dep")
+    for cmd in "${!deps[@]}"; do
+        if ! command -v "$cmd" &> /dev/null; then
+            missing_cmds+=("$cmd")
+            missing_pkgs+=("${deps[$cmd]}")
         fi
     done
     
-    if [ ${#missing[@]} -ne 0 ]; then
-        echo -e "${RED}Error: Missing dependencies: ${missing[*]}${NC}"
-        echo -e "${YELLOW}Install on Fedora:${NC}"
-        echo "  sudo dnf install -y rpm-build golang pandoc make git"
+    if [ ${#missing_cmds[@]} -ne 0 ]; then
+        echo -e "${RED}Error: Missing required commands: ${missing_cmds[*]}${NC}"
+        echo
+        echo -e "${YELLOW}These commands are required but not found in your PATH.${NC}"
+        echo
+        echo -e "${YELLOW}To install on Fedora:${NC}"
+        echo "  sudo dnf install -y ${missing_pkgs[*]}"
+        echo
+        echo -e "${YELLOW}If packages are already installed, ensure the commands are in your PATH.${NC}"
         exit 1
     fi
 }
@@ -84,7 +98,7 @@ show_info() {
     echo "  .rpmmacros: $HOME/.rpmmacros"
     echo
     
-    # Try to get version
+    # Get version
     local version=$(get_version "")
     echo "Version Information:"
     echo "  Current version: $version"
