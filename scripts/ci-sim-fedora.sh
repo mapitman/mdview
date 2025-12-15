@@ -14,5 +14,6 @@ dnf install -y --setopt=tsflags=nodocs rpm-build golang make git pandoc rpmdevto
 
 cd /workdir
 export VERSION
+export BUILDVCS_FLAG=-buildvcs=false
 git config --global --add safe.directory /workdir || true
 make rpm-local

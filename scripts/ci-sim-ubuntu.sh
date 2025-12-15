@@ -38,5 +38,6 @@ fi
 
 cd /workdir
 export VERSION
+export BUILDVCS_FLAG=-buildvcs=false
 export PATH=/usr/local/go/bin:$PATH
 make all

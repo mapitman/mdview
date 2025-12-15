@@ -31,6 +31,6 @@ jobs:
         with:
           go-version: '1.21'
       - name: Build
-        run: VERSION="${{ steps.version.outputs.VERSION }}" make all
+        run: BUILDVCS_FLAG=-buildvcs=false VERSION="${{ steps.version.outputs.VERSION }}" make all
 
 
