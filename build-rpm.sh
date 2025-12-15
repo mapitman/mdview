@@ -36,7 +36,7 @@ EOF
 }
 
 check_dependencies() {
-    # Map of command names to package names for Fedora
+    # Command name -> Package name mapping for Fedora
     declare -A deps=(
         ["rpmbuild"]="rpm-build"
         ["go"]="golang"
