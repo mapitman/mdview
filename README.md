@@ -83,6 +83,24 @@ To remove the package:
 sudo dpkg --remove mdview
 ```
 
+### RPM Package (Fedora)
+
+If you're running Fedora or other RPM-based distributions, you can download and install the RPM package from the [Releases](https://github.com/mapitman/mdview/releases) page.
+
+```sh
+curl -s https://api.github.com/repos/mapitman/mdview/releases/latest \
+| grep "browser_download_url.*x86_64.rpm" \
+| cut -d '"' -f 4 \
+| xargs curl -L -o mdview-latest.x86_64.rpm
+sudo dnf install ./mdview-latest.x86_64.rpm
+```
+
+To remove the package:
+
+```sh
+sudo dnf remove mdview
+```
+
 ### Snap Package
 
 _Update: The snap package has been fixed and the latest version is now available as a snap._ 🥳
