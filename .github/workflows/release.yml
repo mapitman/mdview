@@ -31,7 +31,7 @@ jobs:
           go-version: '1.21'
 
       - name: Build all binaries
-        run: VERSION=${{ steps.version.outputs.VERSION }} make all deb
+        run: BUILDVCS_FLAG=-buildvcs=false VERSION=${{ steps.version.outputs.VERSION }} make all deb
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
@@ -76,7 +76,7 @@ jobs:
           echo "Resolved VERSION=${{ steps.version.outputs.VERSION }}"
 
       - name: Build RPM package
-        run: VERSION=${{ steps.version.outputs.VERSION }} make rpm
+        run: BUILDVCS_FLAG=-buildvcs=false VERSION=${{ steps.version.outputs.VERSION }} make rpm
 
       - name: Copy RPMs to workspace
         run: |

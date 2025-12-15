@@ -62,6 +62,30 @@ make rpm-local VERSION=1.6.4
 | `make ci-sim-fedora` | Simulate Fedora CI build locally |
 | `make ci-sim` | Run both CI simulations |
 
+### VCS Information in Binaries
+
+By default, Go embeds version control system (VCS) information into binaries when building from a git repository. This includes the commit hash, modification status, and timestamp.
+
+The Makefile supports a `BUILDVCS_FLAG` variable to control this behavior:
+- **Default (local builds)**: VCS info is embedded when available
+- **CI/Container builds**: Use `BUILDVCS_FLAG=-buildvcs=false` to disable VCS embedding
+
+**When to disable VCS embedding:**
+- Building in CI environments where `.git` directory may not be accessible
+- Building in containers/chroots where git metadata is unavailable
+- Creating reproducible builds in containerized packaging systems
+
+**Example:**
+```bash
+# Local build with VCS info (default)
+make linux VERSION=1.6.4
+
+# CI/container build without VCS info
+BUILDVCS_FLAG=-buildvcs=false make linux VERSION=1.6.4
+```
+
+The CI workflows and simulation scripts automatically set this flag for reproducible builds.
+
 ## Installing Built Packages
 
 ### Debian
@@ -260,3 +284,4 @@ The project is already available via:
 - Makefile VERSION parameter should use `X.Y.Z` (no `v` prefix)
 - The build system automatically strips the `v` prefix where needed
 - RPM VERSION is sanitized to replace invalid characters with dots
+
