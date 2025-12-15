@@ -94,7 +94,7 @@ rpm: rpm-setup manpage bin/linux-amd64/mdview
 	@mkdir -p $(HOME)/rpmbuild/SOURCES
 	@mkdir -p $(HOME)/rpmbuild/SPECS
 	# sanitize VERSION for RPM (Version field cannot contain some chars like '-')
-	RPM_VERSION=$(shell echo "$(VERSION)" | sed 's/[^A-Za-z0-9.+~_:]/./g') ; \
+	RPM_VERSION=$(shell echo "$(VERSION)" | sed 's/[^A-Za-z0-9._]/./g') ; \
 	echo "Using RPM version: $$RPM_VERSION (from $(VERSION))" ; \
 	git archive --prefix=mdview-$$RPM_VERSION/ -o $(HOME)/rpmbuild/SOURCES/mdview-$$RPM_VERSION.tar.gz HEAD ; \
 	cp mdview.spec $(HOME)/rpmbuild/SPECS/ ; \
