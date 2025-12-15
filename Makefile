@@ -42,17 +42,17 @@ snap:
 bin/linux-amd64/mdview: manpage
 	env GOOS=linux GOARCH=amd64 go build -buildvcs=false -ldflags "-X main.appVersion=$(VERSION)" -o ./bin/linux-amd64/mdview
 	cp mdview.1 bin/linux-amd64/
-	tar czvf mdview-$(VERSION_SAFE)-linux-amd64.tar.gz --transform s/linux-amd64/mdview-$(VERSION_SAFE)/ -C bin linux-amd64
+	tar czvf mdview-$(VERSION_SAFE)-linux-amd64.tar.gz --transform 's,^linux-amd64,mdview-$(VERSION_SAFE),' -C bin linux-amd64
 
 bin/linux-i386/mdview:
 	env GOOS=linux GOARCH=386 go build -buildvcs=false -ldflags "-X main.appVersion=$(VERSION)" -o ./bin/linux-i386/mdview
 	cp mdview.1 bin/linux-i386/
-	tar czvf mdview-$(VERSION_SAFE)-linux-i386.tar.gz --transform s/linux-i386/mdview-$(VERSION_SAFE)/ -C bin linux-i386
+	tar czvf mdview-$(VERSION_SAFE)-linux-i386.tar.gz --transform 's,^linux-i386,mdview-$(VERSION_SAFE),' -C bin linux-i386
 
 bin/linux-arm64/mdview:
 	env GOOS=linux GOARCH=arm64 go build -buildvcs=false -ldflags "-X main.appVersion=$(VERSION)" -o ./bin/linux-arm64/mdview
 	cp mdview.1 bin/linux-arm64/
-	tar czvf mdview-$(VERSION_SAFE)-linux-arm64.tar.gz --transform s/linux-arm64/mdview-$(VERSION_SAFE)/ -C bin linux-arm64
+	tar czvf mdview-$(VERSION_SAFE)-linux-arm64.tar.gz --transform 's,^linux-arm64,mdview-$(VERSION_SAFE),' -C bin linux-arm64
 
 bin/windows-amd64/mdview.exe:
 	env GOOS=windows GOARCH=amd64 go build -buildvcs=false -ldflags "-X main.appVersion=$(VERSION)" -o ./bin/windows-amd64/mdview.exe
@@ -61,17 +61,17 @@ bin/windows-amd64/mdview.exe:
 bin/darwin-amd64/mdview:
 	env GOOS=darwin GOARCH=amd64 go build -buildvcs=false -ldflags "-X main.appVersion=$(VERSION)" -o ./bin/darwin-amd64/mdview
 	cp mdview.1 bin/darwin-amd64/
-	tar czvf mdview-$(VERSION_SAFE)-darwin-amd64.tar.gz --transform s/darwin-amd64/mdview-$(VERSION_SAFE)/ -C bin darwin-amd64
+	tar czvf mdview-$(VERSION_SAFE)-darwin-amd64.tar.gz --transform 's,^darwin-amd64,mdview-$(VERSION_SAFE),' -C bin darwin-amd64
 
 bin/darwin-arm64/mdview:
 	env GOOS=darwin GOARCH=arm64 go build -buildvcs=false -ldflags "-X main.appVersion=$(VERSION)" -o ./bin/darwin-arm64/mdview
 	cp mdview.1 bin/darwin-arm64/
-	tar czvf mdview-$(VERSION_SAFE)-darwin-arm64.tar.gz --transform s/darwin-arm64/mdview-$(VERSION_SAFE)/ -C bin darwin-arm64
+	tar czvf mdview-$(VERSION_SAFE)-darwin-arm64.tar.gz --transform 's,^darwin-arm64,mdview-$(VERSION_SAFE),' -C bin darwin-arm64
 
 bin/freebsd-amd64/mdview:
 	env GOOS=freebsd GOARCH=amd64 go build -buildvcs=false -ldflags "-X main.appVersion=$(VERSION)" -o ./bin/freebsd-amd64/mdview
 	cp mdview.1 bin/freebsd-amd64/mdview
-	tar czvf mdview-$(VERSION_SAFE)-freebsd-amd64.tar.gz --transform s/freebsd-amd64/mdview-$(VERSION_SAFE)/ -C bin freebsd-amd64
+	tar czvf mdview-$(VERSION_SAFE)-freebsd-amd64.tar.gz --transform 's,^freebsd-amd64,mdview-$(VERSION_SAFE),' -C bin freebsd-amd64
 
 clean:
 	rm -rf bin

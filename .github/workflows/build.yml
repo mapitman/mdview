@@ -2,6 +2,12 @@ name: Build
 
 on:
   push:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to build (e.g., 1.0.0)'
+        required: false
+        type: string
 
 jobs:
   build-linux:
