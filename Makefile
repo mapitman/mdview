@@ -1,6 +1,6 @@
 MANSECTION ?= 1
 SHELL=/bin/bash
-.PHONY: clean snap rpm rpm-setup
+.PHONY: clean snap rpm rpm-setup rpm-local rpm-clean ci-sim-ubuntu ci-sim-fedora ci-sim
 default: linux
 all: linux windows darwin freebsd
 
