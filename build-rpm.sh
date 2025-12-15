@@ -84,7 +84,7 @@ show_info() {
     echo "  .rpmmacros: $HOME/.rpmmacros"
     echo
     
-    # Try to get version
+    # Get version
     local version=$(get_version "")
     echo "Version Information:"
     echo "  Current version: $version"
