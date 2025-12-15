@@ -1,6 +1,6 @@
-# RPM Release Checklist
+# Release Checklist
 
-Use this checklist when preparing a new release with RPM packages.
+Use this checklist when preparing a new release.
 
 ## Pre-Release
 
@@ -9,35 +9,33 @@ Use this checklist when preparing a new release with RPM packages.
 - [ ] Update CHANGELOG.md with release notes
 - [ ] Review changes: `git log --oneline [previous-tag]..HEAD`
 - [ ] All tests passing locally
-- [ ] Test local build:
+- [ ] Test local builds (optional):
   ```bash
-  ./build-rpm.sh build 1.0.0
-  sudo dnf install ./dist/mdview-*.rpm
-  mdview --version
+  make rpm-local VERSION=1.0.0
+  make deb VERSION=1.0.0
   ```
 
-## Build Verification
+## Build Verification (Optional)
 
-- [ ] Local build successful:
-  ```bash
-  ./build-rpm.sh local 1.0.0
-  ```
+Test packages locally before releasing:
+
 - [ ] RPM installs without errors:
   ```bash
   sudo dnf install ./dist/mdview-*.rpm
+  ```
+- [ ] DEB installs without errors:
+  ```bash
+  sudo dpkg -i ./dist/mdview-*.deb
   ```
 - [ ] Binary works:
   ```bash
   which mdview
   mdview --version
+  mdview --help
   ```
 - [ ] Man page is accessible:
   ```bash
   man mdview
-  ```
-- [ ] Can test with help:
-  ```bash
-  mdview --help
   ```
 
 ## Create Release Tag
@@ -69,53 +67,39 @@ Use this checklist when preparing a new release with RPM packages.
 ## Release Page Verification
 
 - [ ] Go to Releases page
-- [ ] Release v1.0.0 created
+- [ ] Release created with correct version
 - [ ] Check release contains:
-  - [ ] Binary distributions (tar.gz, zip)
+  - [ ] Binary distributions for all platforms (tar.gz, zip)
   - [ ] RPM packages (.x86_64.rpm, .src.rpm)
-  - [ ] Debian packages (.deb files)
+  - [ ] Debian packages (.deb files for amd64, arm64, i386)
   - [ ] Release notes/description
-- [ ] Downloads work for RPM:
+- [ ] Test download and install:
   ```bash
+  # For RPM
   wget https://github.com/mapitman/mdview/releases/download/v1.0.0/mdview-1.0.0-1.fc*.x86_64.rpm
   sudo dnf install mdview-1.0.0-1.fc*.x86_64.rpm
+  
+  # For DEB
+  wget https://github.com/mapitman/mdview/releases/download/v1.0.0/mdview_1.0.0_amd64.deb
+  sudo dpkg -i mdview_1.0.0_amd64.deb
+  
+  # Verify
   mdview --version
   ```
 
 ## Post-Release
 
-- [ ] Uninstall test version:
-  ```bash
-  sudo dnf remove mdview
-  ```
+- [ ] Uninstall test version (if installed)
 - [ ] Announce release (if applicable)
-- [ ] Update README with new version info
-- [ ] Consider submitting to COPR if using for community
+- [ ] Update README with new version info (if needed)
 - [ ] Tag appears in GitHub releases list
-- [ ] Local cleanup:
-  ```bash
-  ./build-rpm.sh clean
-  ```
-
-## RPM-Specific Checks
-
-- [ ] Binary RPM installs dependencies correctly
-- [ ] Source RPM (.src.rpm) exists
-- [ ] RPM includes man page
-- [ ] RPM includes documentation
-- [ ] RPM includes license file
-- [ ] Post-install tests work:
-  ```bash
-  mdview --version
-  mdview --help
-  man mdview
-  ```
+- [ ] Local cleanup: `make rpm-clean`
 
 ## Emergency Procedures
 
 ### If workflow fails:
 1. Check GitHub Actions logs for errors
-2. Fix issues locally: `./build-rpm.sh build 1.0.0`
+2. Fix issues locally using `make ci-sim` or package-specific builds
 3. Delete tag: `git tag -d v1.0.0`
 4. Delete remote tag: `git push origin --delete v1.0.0`
 5. Fix issues and retry
@@ -126,40 +110,18 @@ Use this checklist when preparing a new release with RPM packages.
 3. Fix issues locally
 4. Create new tag and push again
 
-### If RPM build fails but other builds succeed:
-1. Manual RPM build:
-   ```bash
-   ./build-rpm.sh build 1.0.0
-   ```
-2. Upload to release manually if needed
+### If package build fails but other builds succeed:
+1. Check specific job logs in GitHub Actions
+2. Test locally with CI simulation: `make ci-sim`
+3. Fix issues and create new tag
 
 ## Version Format Notes
 
 - Use semantic versioning: `v1.0.0`, `v1.0.1`, `v1.1.0`, etc.
-- RPM automatically converts to `1.0.0-1.fc*` format
-- Version in tag includes `v` prefix
-- Version in make command uses no prefix
-
-## Distribution
-
-### GitHub Releases
-- ✅ Automatic via push tag
-- All packages included
-- Directly downloadable
-
-### Fedora COPR
-- [ ] Create account if needed
-- [ ] Create project
-- [ ] Link GitHub repo
-- [ ] Enable Fedora versions
-- [ ] Wait for builds to complete
-- [ ] Announce availability
-
-### Direct Installation
-Users can install directly:
-```bash
-sudo dnf install https://github.com/mapitman/mdview/releases/download/v1.0.0/mdview-1.0.0-1.fc*.x86_64.rpm
-```
+- Git tags include `v` prefix
+- Makefile commands use no prefix: `make rpm VERSION=1.0.0`
+- RPM packages appear as `1.0.0-1.fc*.x86_64.rpm`
+- DEB packages appear as `mdview_1.0.0_amd64.deb`
 
 ## Rollback Procedure
 
@@ -174,14 +136,14 @@ If released version has critical bugs:
 
 ## Notes
 
-- All builds happen automatically in GitHub Actions
-- RPMs are built in Fedora container for consistency
-- Multiple output formats included in release
-- Consider using pre-release for testing
-- First-time setup may take extra review by GitHub
+- All builds happen automatically in GitHub Actions on tag push
+- Packages are built in containers for consistency
+- Multiple output formats included in each release
+- Consider using pre-release flag for testing
+- See `PACKAGING.md` for detailed build instructions
 
 ---
 
-**Last Updated**: November 2025
+**Last Updated**: December 2024
 **For**: mdview project
 **Maintainer**: mapitman
