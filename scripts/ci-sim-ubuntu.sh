@@ -32,7 +32,7 @@ if ! version_ge "$INSTALLED" "$GO_VERSION"; then
 	wget -q "https://go.dev/dl/go${GO_VERSION}.linux-amd64.tar.gz" -O "$TARFILE"
 	wget -q "https://go.dev/dl/go${GO_VERSION}.linux-amd64.tar.gz.sha256" -O "$CHECKSUM_FILE"
 	# Verify checksum
-	grep -oE '^[0-9a-f]+' "$CHECKSUM_FILE" | awk '{print $1 "  " ENVIRON["TARFILE"]}' > "$CHECKSUM_FILE.checked"
+	grep -oE '^[0-9a-f]+' "$CHECKSUM_FILE" | awk -v tf="$TARFILE" '{print $1 "  " tf}' > "$CHECKSUM_FILE.checked"
 	sha256sum -c "$CHECKSUM_FILE.checked"
 	rm -rf /usr/local/go
 	tar -C /usr/local -xzf "$TARFILE"
