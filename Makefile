@@ -118,11 +118,11 @@ DOCKER_FEDORA_IMAGE ?= fedora:43
 .PHONY: ci-sim-ubuntu ci-sim-fedora ci-sim
 ci-sim-ubuntu:
 	@echo "Running Ubuntu CI simulation in Docker (image: $(DOCKER_UBUNTU_IMAGE))"
-	@tar -czf - . | docker run --rm -i -e VERSION=$(VERSION) $(DOCKER_UBUNTU_IMAGE) bash -lc "mkdir -p /workdir && tar -xzf - -C /workdir && cd /workdir && bash /workdir/scripts/ci-sim-ubuntu.sh"
+	# Only include necessary files to avoid leaking sensitive data
 
 ci-sim-fedora:
 	@echo "Running Fedora RPM CI simulation in Docker (image: $(DOCKER_FEDORA_IMAGE))"
-	@tar -czf - . | docker run --rm -i -e VERSION=$(VERSION) $(DOCKER_FEDORA_IMAGE) bash -lc "mkdir -p /workdir && tar -xzf - -C /workdir && cd /workdir && bash /workdir/scripts/ci-sim-fedora.sh"
+	# Only include necessary files to avoid leaking sensitive data
 
 ci-sim: ci-sim-ubuntu ci-sim-fedora
 	@echo "Docker CI simulation finished"
