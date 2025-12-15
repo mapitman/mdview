@@ -25,6 +25,8 @@ jobs:
           fi
           # strip any leading v
           VERSION="${VERSION#v}"
+          # Replace slashes with dashes to avoid directory creation issues in filenames
+          VERSION="${VERSION//\//-}"
           echo "VERSION=${VERSION}" >> $GITHUB_OUTPUT
 
       - name: Show chosen version
