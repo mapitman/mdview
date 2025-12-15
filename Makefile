@@ -8,6 +8,10 @@ SHELL=/bin/bash
 # - VCS info is not needed (default: embed VCS info if available)
 BUILDVCS_FLAG ?=
 
+# Sanitize VERSION for use in filenames and tar transform expressions
+# Replace forward slashes with dashes to avoid issues with tar --transform
+VERSION_SAFE = $(subst /,-,$(VERSION))
+
 .PHONY: clean snap rpm rpm-setup rpm-local rpm-clean ci-sim-ubuntu ci-sim-fedora ci-sim
 default: linux
 all: linux windows darwin freebsd
@@ -28,7 +32,7 @@ deb/linux-amd64: bin/linux-amd64/mdview
 	cp -r bin/linux-amd64/mdview package/usr/bin/mdview
 	cp mdview.1 package/usr/share/man/man1/
 	dpkg-deb --build package
-	mv package.deb mdview_$(VERSION)_amd64.deb
+	mv package.deb mdview_$(VERSION_SAFE)_amd64.deb
 
 deb/linux-arm64: bin/linux-arm64/mdview
 	mkdir -p package/DEBIAN
@@ -39,7 +43,7 @@ deb/linux-arm64: bin/linux-arm64/mdview
 	cp -r bin/linux-arm64/mdview package/usr/bin/mdview
 	cp mdview.1 package/usr/share/man/man1/
 	dpkg-deb --build package
-	mv package.deb mdview_$(VERSION)_arm64.deb
+	mv package.deb mdview_$(VERSION_SAFE)_arm64.deb
 
 snap:
 	snapcraft pack
@@ -47,36 +51,36 @@ snap:
 bin/linux-amd64/mdview: manpage
 	env GOOS=linux GOARCH=amd64 go build $(BUILDVCS_FLAG) -ldflags "-X main.appVersion=$(VERSION)" -o ./bin/linux-amd64/mdview
 	cp mdview.1 bin/linux-amd64/
-	mkdir -p bin/mdview-$(VERSION) && cp -r bin/linux-amd64/* bin/mdview-$(VERSION)/ && tar czvf mdview-$(VERSION)-linux-amd64.tar.gz -C bin mdview-$(VERSION) && rm -rf bin/mdview-$(VERSION)
+	mkdir -p bin/mdview-$(VERSION_SAFE) && cp -r bin/linux-amd64/* bin/mdview-$(VERSION_SAFE)/ && tar czvf mdview-$(VERSION_SAFE)-linux-amd64.tar.gz -C bin mdview-$(VERSION_SAFE) && rm -rf bin/mdview-$(VERSION_SAFE)
 
 bin/linux-i386/mdview:
 	env GOOS=linux GOARCH=386 go build $(BUILDVCS_FLAG) -ldflags "-X main.appVersion=$(VERSION)" -o ./bin/linux-i386/mdview
 	cp mdview.1 bin/linux-i386/
-	mkdir -p bin/mdview-$(VERSION) && cp -r bin/linux-i386/* bin/mdview-$(VERSION)/ && tar czvf mdview-$(VERSION)-linux-i386.tar.gz -C bin mdview-$(VERSION) && rm -rf bin/mdview-$(VERSION)
+	mkdir -p bin/mdview-$(VERSION_SAFE) && cp -r bin/linux-i386/* bin/mdview-$(VERSION_SAFE)/ && tar czvf mdview-$(VERSION_SAFE)-linux-i386.tar.gz -C bin mdview-$(VERSION_SAFE) && rm -rf bin/mdview-$(VERSION_SAFE)
 
 bin/linux-arm64/mdview:
 	env GOOS=linux GOARCH=arm64 go build $(BUILDVCS_FLAG) -ldflags "-X main.appVersion=$(VERSION)" -o ./bin/linux-arm64/mdview
 	cp mdview.1 bin/linux-arm64/
-	mkdir -p bin/mdview-$(VERSION) && cp -r bin/linux-arm64/* bin/mdview-$(VERSION)/ && tar czvf mdview-$(VERSION)-linux-arm64.tar.gz -C bin mdview-$(VERSION) && rm -rf bin/mdview-$(VERSION)
+	mkdir -p bin/mdview-$(VERSION_SAFE) && cp -r bin/linux-arm64/* bin/mdview-$(VERSION_SAFE)/ && tar czvf mdview-$(VERSION_SAFE)-linux-arm64.tar.gz -C bin mdview-$(VERSION_SAFE) && rm -rf bin/mdview-$(VERSION_SAFE)
 
 bin/windows-amd64/mdview.exe:
 	env GOOS=windows GOARCH=amd64 go build $(BUILDVCS_FLAG) -ldflags "-X main.appVersion=$(VERSION)" -o ./bin/windows-amd64/mdview.exe
-	zip -j mdview-$(VERSION)-windows-amd64.zip bin/windows-amd64/mdview.exe
+	zip -j mdview-$(VERSION_SAFE)-windows-amd64.zip bin/windows-amd64/mdview.exe
 
 bin/darwin-amd64/mdview:
 	env GOOS=darwin GOARCH=amd64 go build $(BUILDVCS_FLAG) -ldflags "-X main.appVersion=$(VERSION)" -o ./bin/darwin-amd64/mdview
 	cp mdview.1 bin/darwin-amd64/
-	mkdir -p bin/mdview-$(VERSION) && cp -r bin/darwin-amd64/* bin/mdview-$(VERSION)/ && tar czvf mdview-$(VERSION)-darwin-amd64.tar.gz -C bin mdview-$(VERSION) && rm -rf bin/mdview-$(VERSION)
+	mkdir -p bin/mdview-$(VERSION_SAFE) && cp -r bin/darwin-amd64/* bin/mdview-$(VERSION_SAFE)/ && tar czvf mdview-$(VERSION_SAFE)-darwin-amd64.tar.gz -C bin mdview-$(VERSION_SAFE) && rm -rf bin/mdview-$(VERSION_SAFE)
 
 bin/darwin-arm64/mdview:
 	env GOOS=darwin GOARCH=arm64 go build $(BUILDVCS_FLAG) -ldflags "-X main.appVersion=$(VERSION)" -o ./bin/darwin-arm64/mdview
 	cp mdview.1 bin/darwin-arm64/
-	mkdir -p bin/mdview-$(VERSION) && cp -r bin/darwin-arm64/* bin/mdview-$(VERSION)/ && tar czvf mdview-$(VERSION)-darwin-arm64.tar.gz -C bin mdview-$(VERSION) && rm -rf bin/mdview-$(VERSION)
+	mkdir -p bin/mdview-$(VERSION_SAFE) && cp -r bin/darwin-arm64/* bin/mdview-$(VERSION_SAFE)/ && tar czvf mdview-$(VERSION_SAFE)-darwin-arm64.tar.gz -C bin mdview-$(VERSION_SAFE) && rm -rf bin/mdview-$(VERSION_SAFE)
 
 bin/freebsd-amd64/mdview:
 	env GOOS=freebsd GOARCH=amd64 go build $(BUILDVCS_FLAG) -ldflags "-X main.appVersion=$(VERSION)" -o ./bin/freebsd-amd64/mdview
 	cp mdview.1 bin/freebsd-amd64/mdview
-	mkdir -p bin/mdview-$(VERSION) && cp -r bin/freebsd-amd64/* bin/mdview-$(VERSION)/ && tar czvf mdview-$(VERSION)-freebsd-amd64.tar.gz -C bin mdview-$(VERSION) && rm -rf bin/mdview-$(VERSION)
+	mkdir -p bin/mdview-$(VERSION_SAFE) && cp -r bin/freebsd-amd64/* bin/mdview-$(VERSION_SAFE)/ && tar czvf mdview-$(VERSION_SAFE)-freebsd-amd64.tar.gz -C bin mdview-$(VERSION_SAFE) && rm -rf bin/mdview-$(VERSION_SAFE)
 
 clean:
 	rm -rf bin

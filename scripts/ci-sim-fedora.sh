@@ -9,11 +9,11 @@ VERSION="${VERSION#v}"
 echo "Using VERSION=${VERSION}"
 
 # Install required packages for building RPMs
+# Ignore failures from 'dnf upgrade' as package upgrades are not critical for CI; required packages are installed explicitly below.
 dnf -y upgrade --refresh || true
 dnf install -y --setopt=tsflags=nodocs rpm-build golang make git pandoc rpmdevtools
 
 cd /workdir
 export VERSION
-export BUILDVCS_FLAG=-buildvcs=false
 git config --global --add safe.directory /workdir || true
 make rpm-local

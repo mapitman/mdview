@@ -28,7 +28,12 @@ version_ge() {
 if ! version_ge "$INSTALLED" "$GO_VERSION"; then
 	echo "Installing Go ${GO_VERSION}"
 	TARFILE=/tmp/go${GO_VERSION}.linux-amd64.tar.gz
+	CHECKSUM_FILE=/tmp/go${GO_VERSION}.linux-amd64.tar.gz.sha256
 	wget -q "https://go.dev/dl/go${GO_VERSION}.linux-amd64.tar.gz" -O "$TARFILE"
+	wget -q "https://go.dev/dl/go${GO_VERSION}.linux-amd64.tar.gz.sha256" -O "$CHECKSUM_FILE"
+	# Verify checksum
+	grep -oE '^[0-9a-f]+' "$CHECKSUM_FILE" | awk '{print $1 "  " ENVIRON["TARFILE"]}' > "$CHECKSUM_FILE.checked"
+	sha256sum -c "$CHECKSUM_FILE.checked"
 	rm -rf /usr/local/go
 	tar -C /usr/local -xzf "$TARFILE"
 	export PATH=/usr/local/go/bin:$PATH
@@ -38,6 +43,5 @@ fi
 
 cd /workdir
 export VERSION
-export BUILDVCS_FLAG=-buildvcs=false
 export PATH=/usr/local/go/bin:$PATH
 make all
