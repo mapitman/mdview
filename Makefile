@@ -103,9 +103,9 @@ rpm: rpm-setup manpage bin/linux-amd64/mdview
 
 rpm-local: rpm
 	@mkdir -p dist
-	cp $(HOME)/rpmbuild/RPMS/x86_64/mdview-$(VERSION)-*.x86_64.rpm dist/ 2>/dev/null || true
-	cp $(HOME)/rpmbuild/SRPMS/mdview-$(VERSION)-*.src.rpm dist/ 2>/dev/null || true
-	@ls -lh dist/mdview-$(VERSION)-*.rpm 2>/dev/null || echo "No RPMs found in dist/"
+	cp $(HOME)/rpmbuild/RPMS/x86_64/mdview-*-*.x86_64.rpm dist/ 2>/dev/null || true
+	cp $(HOME)/rpmbuild/SRPMS/mdview-*-*.src.rpm dist/ 2>/dev/null || true
+	@ls -lh dist/mdview-*-*.rpm 2>/dev/null || echo "No RPMs found in dist/"
 
 rpm-clean:
 	rm -rf $(HOME)/rpmbuild
