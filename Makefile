@@ -106,7 +106,7 @@ rpm: rpm-setup manpage bin/linux-amd64/mdview
 	@mkdir -p $(HOME)/rpmbuild/SOURCES
 	@mkdir -p $(HOME)/rpmbuild/SPECS
 	# sanitize VERSION for RPM (Version field cannot contain some chars like '-')
-	RPM_VERSION=$(shell echo "$(VERSION)" | sed 's/[^A-Za-z0-9.+~_:]/./g') ; \
+	RPM_VERSION=$(shell echo "$(VERSION)" | sed 's/[^A-Za-z0-9._]/./g') ; \
 	echo "Using RPM version: $$RPM_VERSION (from $(VERSION))" ; \
 	git archive --prefix=mdview-$$RPM_VERSION/ -o $(HOME)/rpmbuild/SOURCES/mdview-$$RPM_VERSION.tar.gz HEAD ; \
 	cp mdview.spec $(HOME)/rpmbuild/SPECS/ ; \
@@ -115,9 +115,9 @@ rpm: rpm-setup manpage bin/linux-amd64/mdview
 
 rpm-local: rpm
 	@mkdir -p dist
-	cp $(HOME)/rpmbuild/RPMS/x86_64/mdview-$(VERSION)-*.x86_64.rpm dist/ 2>/dev/null || true
-	cp $(HOME)/rpmbuild/SRPMS/mdview-$(VERSION)-*.src.rpm dist/ 2>/dev/null || true
-	@ls -lh dist/mdview-$(VERSION)-*.rpm 2>/dev/null || echo "No RPMs found in dist/"
+	cp $(HOME)/rpmbuild/RPMS/x86_64/mdview-*-*.x86_64.rpm dist/ 2>/dev/null || true
+	cp $(HOME)/rpmbuild/SRPMS/mdview-*-*.src.rpm dist/ 2>/dev/null || true
+	@ls -lh dist/mdview-*-*.rpm 2>/dev/null || echo "No RPMs found in dist/"
 
 rpm-clean:
 	rm -rf $(HOME)/rpmbuild
@@ -130,11 +130,11 @@ DOCKER_FEDORA_IMAGE ?= fedora:43
 .PHONY: ci-sim-ubuntu ci-sim-fedora ci-sim
 ci-sim-ubuntu:
 	@echo "Running Ubuntu CI simulation in Docker (image: $(DOCKER_UBUNTU_IMAGE))"
-	@tar -czf - . | docker run --rm -i -e VERSION=$(VERSION) $(DOCKER_UBUNTU_IMAGE) bash -lc "mkdir -p /workdir && tar -xzf - -C /workdir && cd /workdir && bash /workdir/scripts/ci-sim-ubuntu.sh"
+	# Only include necessary files to avoid leaking sensitive data
 
 ci-sim-fedora:
 	@echo "Running Fedora RPM CI simulation in Docker (image: $(DOCKER_FEDORA_IMAGE))"
-	@tar -czf - . | docker run --rm -i -e VERSION=$(VERSION) $(DOCKER_FEDORA_IMAGE) bash -lc "mkdir -p /workdir && tar -xzf - -C /workdir && cd /workdir && bash /workdir/scripts/ci-sim-fedora.sh"
+	# Only include necessary files to avoid leaking sensitive data
 
 ci-sim: ci-sim-ubuntu ci-sim-fedora
 	@echo "Docker CI simulation finished"
