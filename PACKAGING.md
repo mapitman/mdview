@@ -284,3 +284,4 @@ The project is already available via:
 - Makefile VERSION parameter should use `X.Y.Z` (no `v` prefix)
 - The build system automatically strips the `v` prefix where needed
 - RPM VERSION is sanitized to replace invalid characters with dots
+
