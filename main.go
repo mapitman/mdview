@@ -12,6 +12,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 
 	"github.com/pkg/browser"
@@ -189,6 +190,12 @@ func processImageTokens(tokens []markdown.Token, baseDir string) {
 					t.Src = dataURI
 				}
 			}
+		case *markdown.HTMLInline:
+			// Process inline HTML that may contain <img> tags
+			t.Content = processHTMLImages(t.Content, baseDir)
+		case *markdown.HTMLBlock:
+			// Process block HTML that may contain <img> tags
+			t.Content = processHTMLImages(t.Content, baseDir)
 		case *markdown.Inline:
 			// Recursively process child tokens
 			if t.Children != nil {
@@ -196,6 +203,37 @@ func processImageTokens(tokens []markdown.Token, baseDir string) {
 			}
 		}
 	}
+}
+
+// processHTMLImages processes HTML content and converts relative image src attributes to data URIs
+func processHTMLImages(html string, baseDir string) string {
+	// Regular expression to match <img> tags with src attributes
+	// This handles various formats: src="path", src='path', src=path
+	imgRegex := regexp.MustCompile(`(<img[^>]*\ssrc=)(['"]?)([^'"\s>]+)(['"]?)`)
+	
+	result := imgRegex.ReplaceAllStringFunc(html, func(match string) string {
+		// Extract the parts using the regex
+		parts := imgRegex.FindStringSubmatch(match)
+		if len(parts) != 5 {
+			return match
+		}
+		
+		prefix := parts[1]      // "<img...src="
+		openQuote := parts[2]   // " or ' or empty
+		srcPath := parts[3]     // the actual path
+		closeQuote := parts[4]  // " or ' or empty
+		
+		// Check if the path is relative
+		if isRelativePath(srcPath) {
+			if dataURI := imageToDataURI(srcPath, baseDir); dataURI != "" {
+				return prefix + openQuote + dataURI + closeQuote
+			}
+		}
+		
+		return match
+	})
+	
+	return result
 }
 
 // isRelativePath checks if a path is relative (not http://, https://, //, or absolute path)
