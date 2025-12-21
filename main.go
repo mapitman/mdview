@@ -240,7 +240,14 @@ func imageToDataURI(imagePath string, baseDir string) string {
 		relPath, err := filepath.Rel(cleanedBase, cleanedPath)
 		if err != nil || strings.HasPrefix(relPath, "..") {
 			// Allow up to 3 levels of parent directory traversal for flexibility
-			parentLevels := strings.Count(relPath, "..")
+			// Count the number of ".." path components
+			components := strings.Split(filepath.ToSlash(relPath), "/")
+			parentLevels := 0
+			for _, component := range components {
+				if component == ".." {
+					parentLevels++
+				}
+			}
 			if parentLevels > 3 {
 				log.Printf("Warning: Image path %s goes too many levels above base directory", imagePath)
 				return ""
@@ -297,6 +304,8 @@ func getMimeType(path string) string {
 	case ".ico":
 		return "image/x-icon"
 	default:
-		return "application/octet-stream"
+		// For unknown extensions, log a warning but try with generic image type
+		log.Printf("Warning: Unknown image extension %s for file %s, using image/* MIME type", ext, path)
+		return "image/*"
 	}
 }
