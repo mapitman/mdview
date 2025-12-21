@@ -220,16 +220,56 @@ func imageToDataURI(imagePath string, baseDir string) string {
 	// Resolve the full path relative to the markdown file
 	fullPath := filepath.Join(baseDir, imagePath)
 	
-	// Read the image file
-	data, err := os.ReadFile(fullPath)
+	// Clean and validate the path to prevent path traversal attacks
+	cleanedPath, err := filepath.Abs(fullPath)
 	if err != nil {
-		// If the image can't be read, log a warning and return empty string to keep original path
-		log.Printf("Warning: Unable to read image file %s: %v", fullPath, err)
+		log.Printf("Warning: Invalid image path %s: %v", fullPath, err)
+		return ""
+	}
+	
+	// Ensure the resolved path is within or relative to the base directory
+	cleanedBase, err := filepath.Abs(baseDir)
+	if err != nil {
+		log.Printf("Warning: Invalid base directory %s: %v", baseDir, err)
+		return ""
+	}
+	
+	// Check if the cleaned path starts with the base directory or is a reasonable relative reference
+	// We allow accessing parent directories for flexibility with markdown repos
+	if !strings.HasPrefix(cleanedPath, cleanedBase) {
+		relPath, err := filepath.Rel(cleanedBase, cleanedPath)
+		if err != nil || strings.HasPrefix(relPath, "..") {
+			// Allow up to 3 levels of parent directory traversal for flexibility
+			parentLevels := strings.Count(relPath, "..")
+			if parentLevels > 3 {
+				log.Printf("Warning: Image path %s goes too many levels above base directory", imagePath)
+				return ""
+			}
+		}
+	}
+	
+	// Check file size before reading (limit to 10MB to prevent memory issues)
+	fileInfo, err := os.Stat(cleanedPath)
+	if err != nil {
+		log.Printf("Warning: Unable to stat image file %s: %v", cleanedPath, err)
+		return ""
+	}
+	
+	const maxSize = 10 * 1024 * 1024 // 10MB
+	if fileInfo.Size() > maxSize {
+		log.Printf("Warning: Image file %s is too large (%d bytes, max %d bytes)", cleanedPath, fileInfo.Size(), maxSize)
+		return ""
+	}
+	
+	// Read the image file
+	data, err := os.ReadFile(cleanedPath)
+	if err != nil {
+		log.Printf("Warning: Unable to read image file %s: %v", cleanedPath, err)
 		return ""
 	}
 	
 	// Determine MIME type based on file extension
-	mimeType := getMimeType(fullPath)
+	mimeType := getMimeType(cleanedPath)
 	
 	// Encode to base64
 	encoded := base64.StdEncoding.EncodeToString(data)
