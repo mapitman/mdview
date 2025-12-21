@@ -2,6 +2,7 @@ package main
 
 import (
 	"crypto/rand"
+	"encoding/base64"
 	_ "embed"
 	"encoding/hex"
 	"errors"
@@ -58,6 +59,11 @@ func main() {
 		markdown.Typographer(true))
 
 	markdownTokens := md.Parse(dat)
+	
+	// Convert relative image links to data URIs
+	baseDir := filepath.Dir(inputFilename)
+	processImageTokens(markdownTokens, baseDir)
+	
 	html := md.RenderTokensToString(markdownTokens)
 	title := getTitle(markdownTokens)
 
@@ -171,4 +177,86 @@ func getText(token markdown.Token) string {
 
 func isSnap() bool {
 	return os.Getenv("SNAP_USER_COMMON") != ""
+}
+
+// processImageTokens walks through markdown tokens and converts relative image paths to data URIs
+func processImageTokens(tokens []markdown.Token, baseDir string) {
+	for _, token := range tokens {
+		switch t := token.(type) {
+		case *markdown.Image:
+			if isRelativePath(t.Src) {
+				if dataURI := imageToDataURI(t.Src, baseDir); dataURI != "" {
+					t.Src = dataURI
+				}
+			}
+		case *markdown.Inline:
+			// Recursively process child tokens
+			if t.Children != nil {
+				processImageTokens(t.Children, baseDir)
+			}
+		}
+	}
+}
+
+// isRelativePath checks if a path is relative (not http://, https://, //, or absolute path)
+func isRelativePath(path string) bool {
+	if strings.HasPrefix(path, "http://") || strings.HasPrefix(path, "https://") {
+		return false
+	}
+	if strings.HasPrefix(path, "//") {
+		return false
+	}
+	if strings.HasPrefix(path, "data:") {
+		return false
+	}
+	if filepath.IsAbs(path) {
+		return false
+	}
+	return true
+}
+
+// imageToDataURI reads an image file and converts it to a base64 data URI
+func imageToDataURI(imagePath string, baseDir string) string {
+	// Resolve the full path relative to the markdown file
+	fullPath := filepath.Join(baseDir, imagePath)
+	
+	// Read the image file
+	data, err := os.ReadFile(fullPath)
+	if err != nil {
+		// If the image can't be read, log a warning and return empty string to keep original path
+		log.Printf("Warning: Unable to read image file %s: %v", fullPath, err)
+		return ""
+	}
+	
+	// Determine MIME type based on file extension
+	mimeType := getMimeType(fullPath)
+	
+	// Encode to base64
+	encoded := base64.StdEncoding.EncodeToString(data)
+	
+	// Return data URI
+	return fmt.Sprintf("data:%s;base64,%s", mimeType, encoded)
+}
+
+// getMimeType returns the MIME type based on file extension
+func getMimeType(path string) string {
+	ext := strings.ToLower(filepath.Ext(path))
+	switch ext {
+	case ".jpg", ".jpeg":
+		return "image/jpeg"
+	case ".png":
+		return "image/png"
+	case ".gif":
+		return "image/gif"
+	case ".svg":
+		return "image/svg+xml"
+	case ".webp":
+		return "image/webp"
+	case ".bmp":
+		return "image/bmp"
+	case ".ico":
+		return "image/x-icon"
+	default:
+		return "application/octet-stream"
+	}
 }
