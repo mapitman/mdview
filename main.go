@@ -21,6 +21,10 @@ import (
 
 var appVersion string
 
+// imgSrcRegex matches <img> tags with src attributes
+// Captures: 1=prefix, 2=opening quote, 3=src path, 4=closing quote
+var imgSrcRegex = regexp.MustCompile(`(<img[^>]*\ssrc=)(["']?)([^"'\s>]+)(["']?)`)
+
 //go:embed github-markdown.css
 var style string
 
@@ -207,13 +211,10 @@ func processImageTokens(tokens []markdown.Token, baseDir string) {
 
 // processHTMLImages processes HTML content and converts relative image src attributes to data URIs
 func processHTMLImages(html string, baseDir string) string {
-	// Regular expression to match <img> tags with src attributes
-	// This handles various formats: src="path", src='path', src=path
-	imgRegex := regexp.MustCompile(`(<img[^>]*\ssrc=)(['"]?)([^'"\s>]+)(['"]?)`)
-	
-	result := imgRegex.ReplaceAllStringFunc(html, func(match string) string {
+	// Use the package-level regex to match <img> tags with src attributes
+	result := imgSrcRegex.ReplaceAllStringFunc(html, func(match string) string {
 		// Extract the parts using the regex
-		parts := imgRegex.FindStringSubmatch(match)
+		parts := imgSrcRegex.FindStringSubmatch(match)
 		if len(parts) != 5 {
 			return match
 		}
@@ -222,6 +223,11 @@ func processHTMLImages(html string, baseDir string) string {
 		openQuote := parts[2]   // " or ' or empty
 		srcPath := parts[3]     // the actual path
 		closeQuote := parts[4]  // " or ' or empty
+		
+		// If quotes don't match, return original (malformed HTML)
+		if openQuote != closeQuote {
+			return match
+		}
 		
 		// Check if the path is relative
 		if isRelativePath(srcPath) {
@@ -276,7 +282,13 @@ func imageToDataURI(imagePath string, baseDir string) string {
 	// We allow accessing parent directories for flexibility with markdown repos
 	if !strings.HasPrefix(cleanedPath, cleanedBase) {
 		relPath, err := filepath.Rel(cleanedBase, cleanedPath)
-		if err != nil || strings.HasPrefix(relPath, "..") {
+		if err != nil {
+			log.Printf("Warning: Unable to determine relative path for %s: %v", imagePath, err)
+			return ""
+		}
+		
+		// If the path goes outside the base directory, check parent traversal limits
+		if strings.HasPrefix(relPath, "..") {
 			// Allow up to 3 levels of parent directory traversal for flexibility
 			// Count the number of ".." path components
 			components := strings.Split(filepath.ToSlash(relPath), "/")
