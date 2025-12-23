@@ -34,7 +34,8 @@ var imgSrcRegex = regexp.MustCompile(`(<img[^>]*\ssrc=)(["']?)([^"'\s>]+)(["']?)
 
 // cdnScriptRegex matches Mermaid CDN script tags followed by initialization script
 // Goldmark's mermaid extension inserts these tags that need to be replaced with embedded version
-var cdnScriptRegex = regexp.MustCompile(`<script\s+src\s*=\s*"https://cdn\.jsdelivr\.net/npm/mermaid[^"]*"\s*>\s*</script>\s*<script\s*>\s*mermaid\.initialize\s*\(\s*\{\s*startOnLoad\s*:\s*true\s*\}\s*\)\s*;\s*</script>`)
+// Pattern allows for flexible whitespace between elements
+var cdnScriptRegex = regexp.MustCompile(`<script\s+src\s*=\s*"https://cdn\.jsdelivr\.net/npm/mermaid[^"]*"\s*>\s*</script>\s*<script[^>]*>\s*mermaid\.initialize\s*\([^)]*\)\s*;\s*</script>`)
 
 //go:embed github-markdown.css
 var style string
@@ -396,11 +397,8 @@ func getMimeType(path string) string {
 
 // embedMermaidScript replaces CDN-based Mermaid script tags with inline embedded script
 func embedMermaidScript(htmlContent string) string {
-	if cdnScriptRegex.MatchString(htmlContent) {
-		// Replace CDN scripts with inline Mermaid.js
-		inlineScript := fmt.Sprintf("<script>%s</script><script>mermaid.initialize({startOnLoad: true});</script>", mermaidJS)
-		htmlContent = cdnScriptRegex.ReplaceAllString(htmlContent, inlineScript)
-	}
-	
-	return htmlContent
+	// Replace CDN scripts with inline Mermaid.js
+	// ReplaceAllString performs no replacement if no matches found, so no need to check first
+	inlineScript := fmt.Sprintf("<script>%s</script><script>mermaid.initialize({startOnLoad: true});</script>", mermaidJS)
+	return cdnScriptRegex.ReplaceAllString(htmlContent, inlineScript)
 }
