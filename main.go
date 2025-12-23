@@ -401,13 +401,14 @@ func getMimeType(path string) string {
 // Since we set NoScript: true on the Mermaid extender, we need to manually add the script
 func embedMermaidScript(htmlContent string) string {
 	// Check if there are any mermaid diagrams in the content
+	// The Goldmark mermaid extension uses class="mermaid" for diagram blocks
 	if !strings.Contains(htmlContent, `class="mermaid"`) {
 		return htmlContent // No mermaid diagrams, don't add the script
 	}
 	
-	// Escape any </script> tags inside the mermaid.js code to prevent premature script closure
-	// The standard way is to escape the forward slash: </script> becomes <\/script>
-	escapedMermaidJS := strings.ReplaceAll(mermaidJS, "</script", "<\\/script")
+	// Escape any </script> tags (with closing >) inside the mermaid.js code 
+	// to prevent premature script closure. The standard way is to escape the forward slash.
+	escapedMermaidJS := strings.ReplaceAll(mermaidJS, "</script>", "<\\/script>")
 	
 	// Add the embedded Mermaid.js and initialization at the end of the content
 	inlineScript := fmt.Sprintf("<script>%s</script><script>mermaid.initialize({startOnLoad: true});</script>", escapedMermaidJS)
