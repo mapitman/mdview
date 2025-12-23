@@ -82,7 +82,9 @@ func main() {
 		goldmark.WithExtensions(
 			extension.GFM,        // GitHub Flavored Markdown (includes tables)
 			extension.Typographer, // Smart quotes, dashes, etc.
-			&mermaid.Extender{},  // Mermaid diagram support
+			&mermaid.Extender{
+				NoScript: true,   // Don't add CDN script tags - we'll add our own embedded version
+			},
 		),
 		goldmark.WithParserOptions(
 			parser.WithAutoHeadingID(), // Auto-generate heading IDs
@@ -395,10 +397,20 @@ func getMimeType(path string) string {
 	}
 }
 
-// embedMermaidScript replaces CDN-based Mermaid script tags with inline embedded script
+// embedMermaidScript adds the embedded Mermaid.js library to the HTML content
+// Since we set NoScript: true on the Mermaid extender, we need to manually add the script
 func embedMermaidScript(htmlContent string) string {
-	// Replace CDN scripts with inline Mermaid.js
-	// ReplaceAllString performs no replacement if no matches found, so no need to check first
-	inlineScript := fmt.Sprintf("<script>%s</script><script>mermaid.initialize({startOnLoad: true});</script>", mermaidJS)
-	return cdnScriptRegex.ReplaceAllString(htmlContent, inlineScript)
+	// Check if there are any mermaid diagrams in the content
+	if !strings.Contains(htmlContent, `class="mermaid"`) {
+		return htmlContent // No mermaid diagrams, don't add the script
+	}
+	
+	// Escape any </script> tags inside the mermaid.js code to prevent premature script closure
+	// The standard way is to escape the forward slash: </script> becomes <\/script>
+	escapedMermaidJS := strings.ReplaceAll(mermaidJS, "</script", "<\\/script")
+	
+	// Add the embedded Mermaid.js and initialization at the end of the content
+	inlineScript := fmt.Sprintf("<script>%s</script><script>mermaid.initialize({startOnLoad: true});</script>", escapedMermaidJS)
+	
+	return htmlContent + inlineScript
 }
