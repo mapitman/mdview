@@ -38,6 +38,9 @@ var style string
 //go:embed template.html
 var template string
 
+//go:embed mermaid.min.js
+var mermaidJS string
+
 func main() {
 	var outfilePtr = flag.String("o", "", "Output filename. (Optional)")
 	var versionPtr = flag.Bool("version", false, "Prints mdview version.")
@@ -96,6 +99,9 @@ func main() {
 		log.Fatal(err)
 	}
 	htmlContent := buf.String()
+	
+	// Replace CDN-based Mermaid scripts with inline script
+	htmlContent = embedMermaidScript(htmlContent)
 
 	outfilePath := *outfilePtr
 	if outfilePath == "" {
@@ -382,4 +388,19 @@ func getMimeType(path string) string {
 		log.Printf("Warning: Unknown image extension %s for file %s, using image/* MIME type", ext, path)
 		return "image/*"
 	}
+}
+
+// embedMermaidScript replaces CDN-based Mermaid script tags with inline embedded script
+func embedMermaidScript(htmlContent string) string {
+	// Check if the HTML contains Mermaid CDN script references
+	cdnScriptPattern := `<script src="https://cdn\.jsdelivr\.net/npm/mermaid[^"]*"></script><script>mermaid\.initialize\(\{startOnLoad: true\}\);</script>`
+	cdnRegex := regexp.MustCompile(cdnScriptPattern)
+	
+	if cdnRegex.MatchString(htmlContent) {
+		// Replace CDN scripts with inline Mermaid.js
+		inlineScript := fmt.Sprintf("<script>%s</script><script>mermaid.initialize({startOnLoad: true});</script>", mermaidJS)
+		htmlContent = cdnRegex.ReplaceAllString(htmlContent, inlineScript)
+	}
+	
+	return htmlContent
 }
