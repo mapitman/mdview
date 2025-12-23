@@ -177,19 +177,30 @@ func getTitleFromAST(doc ast.Node, source []byte) string {
 			return ast.WalkContinue, nil
 		}
 		if heading, ok := n.(*ast.Heading); ok && heading.Level == 1 {
-			// Extract text from heading
+			// Extract all text from heading and its children recursively
 			var buf bytes.Buffer
-			for child := heading.FirstChild(); child != nil; child = child.NextSibling() {
-				if text, ok := child.(*ast.Text); ok {
-					buf.Write(text.Segment.Value(source))
-				}
-			}
+			extractText(heading, source, &buf)
 			title = strings.TrimSpace(buf.String())
 			return ast.WalkStop, nil
 		}
 		return ast.WalkContinue, nil
 	})
 	return title
+}
+
+// extractText recursively extracts text from a node and its children
+func extractText(node ast.Node, source []byte, buf *bytes.Buffer) {
+	for child := node.FirstChild(); child != nil; child = child.NextSibling() {
+		switch n := child.(type) {
+		case *ast.Text:
+			buf.Write(n.Segment.Value(source))
+		case *ast.String:
+			buf.Write(n.Value)
+		default:
+			// Recursively extract text from other node types (emphasis, strong, links, etc.)
+			extractText(child, source, buf)
+		}
+	}
 }
 
 func isSnap() bool {
@@ -202,7 +213,7 @@ func processMarkdownImages(markdown string, baseDir string) string {
 	imgMarkdownRegex := regexp.MustCompile(`!\[([^\]]*)\]\(([^)]+)\)`)
 	markdown = imgMarkdownRegex.ReplaceAllStringFunc(markdown, func(match string) string {
 		parts := imgMarkdownRegex.FindStringSubmatch(match)
-		if len(parts) != 3 {
+		if len(parts) < 3 {
 			return match
 		}
 		alt := parts[1]
@@ -220,11 +231,6 @@ func processMarkdownImages(markdown string, baseDir string) string {
 	markdown = processHTMLImages(markdown, baseDir)
 	
 	return markdown
-}
-
-// processImageTokens is no longer needed with Goldmark
-func processImageTokens(tokens []interface{}, baseDir string) {
-	// This function is no longer needed with Goldmark
 }
 
 // processHTMLImages processes HTML content and converts relative image src attributes to data URIs
