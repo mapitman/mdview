@@ -15,7 +15,7 @@ mdview is a command-line tool written in Go that formats Markdown files and laun
 
 ## Project Structure
 
-- `main.go` - Single-file application containing all core logic (~361 lines)
+- `main.go` - Single-file application containing all core logic
 - `github-markdown.css` - Embedded GitHub-style CSS for rendered output
 - `template.html` - Embedded HTML template for output
 - `mdview.1.md` - Man page in Markdown format (converted to `mdview.1` via pandoc)
