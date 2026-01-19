@@ -107,7 +107,7 @@ func main() {
 	}
 	htmlContent := buf.String()
 	
-	// Replace CDN-based Mermaid scripts with inline script
+	// Add embedded Mermaid.js and initialization script when diagrams are present
 	htmlContent = embedMermaidScript(htmlContent)
 
 	outfilePath := *outfilePtr
