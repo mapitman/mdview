@@ -1,21 +1,34 @@
 # Markdown View
+![Markdown View application icon showing the letter M with a downward arrow on a white background](markdown-256.webp)
 
 [![Build](https://github.com/mapitman/mdview/actions/workflows/build.yml/badge.svg)](https://github.com/mapitman/mdview/actions/workflows/build.yml)
 
-Formats markdown and launches it in a browser.
+A lightweight command-line tool that converts markdown files to styled HTML and opens them in your default browser. Supports GitHub Flavored Markdown, Mermaid diagrams, embedded images, and automatic theme detection.
+
+## Features
+
+- **GitHub Flavored Markdown** - Full support for tables, task lists, strikethrough, and more
+- **Mermaid Diagrams** - Create flowcharts, sequence diagrams, state diagrams, and other visualizations directly in markdown
+- **Embedded Images** - Automatically converts relative image paths to data URIs for offline viewing
+- **Theme Detection** - HTML output conforms to your system's light or dark theme setting
+- **Typographic Enhancements** - Smart quotes, dashes, and other typographic improvements
+- **Bare HTML Option** - Generate unstyled HTML when needed
+- **Flexible Output** - Write to a temporary file or specify a custom output location
+
+
 
 ## Usage
 
-By default, `mdview` tries to use your operating system's temporary
-directory to write HTML files to. If that doesn't work for you, you can
-set an environment variable that it will use instead. For example, on
-Ubuntu Linux, Firefox is packaged as a Snap and is unable to read from
-`/tmp`. I get around this by setting `MDVIEW_DIR` like so:
+By default, `mdview` writes the generated HTML to a temporary directory.
+It tries these in order:
+- A path defined in the `MDVIEW_DIR` environment variable
+- Your operating system's temporary directory
 
-```sh
-export MDVIEW_DIR=$HOME/mdview-temp
-```
-
+If you are on Linux and set the `TMPDIR` environment variable, that is 
+what the OS will report as the temp directory. If you set it to a 
+directory under your home directory, then browsers installed via Snap 
+(like Firefox on Ubuntu) will be able to read the generated file.
+Applications installed via Snap are unable to read from `/tmp`.
 
 ```text
 Usage:
@@ -50,7 +63,7 @@ Thanks to [sindresorhus](https://github.com/sindresorhus/github-markdown-css) fo
 
 ### Arch Linux (and derivatives)
 
-Markdown View is now available in the [AUR](https://aur.archlinux.org/packages/mdview/)
+Markdown View is available in the [AUR](https://aur.archlinux.org/packages/mdview/)
 If you have an AUR helper like `yay`, installing is as easy as:
 ```
 yay -S mdview
@@ -119,4 +132,20 @@ go get github.com/mapitman/mdview
 
 Don't have Golang? [Get it now](https://golang.org/doc/install).
 
+## How It Works
+
+```mermaid
+graph TD
+    A["📄 Markdown File"] -->|Read| B["Process Images"]
+    B -->|Convert<br/>Relative Paths<br/>to Data URIs| C["Image Processing"]
+    C --> D["Parse Markdown"]
+    D -->|GFM + Mermaid<br/>+ Typography| E["Goldmark Parser"]
+    E -->|Generate| F["HTML AST"]
+    F -->|Extract Title| G["Extract H1"]
+    F -->|Render| H["HTML Content"]
+    H -->|Embed<br/>Scripts| I["Add Mermaid.js"]
+    I -->|Apply Styles| J["Apply CSS Theme"]
+    J -->|Generate| K["HTML File"]
+    K -->|Launch| L["🌐 Browser"]
+```
 

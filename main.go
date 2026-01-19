@@ -3,8 +3,8 @@ package main
 import (
 	"bytes"
 	"crypto/rand"
-	"encoding/base64"
 	_ "embed"
+	"encoding/base64"
 	"encoding/hex"
 	"errors"
 	"flag"
@@ -411,7 +411,21 @@ func embedMermaidScript(htmlContent string) string {
 	escapedMermaidJS := strings.ReplaceAll(mermaidJS, "</script>", "<\\/script>")
 	
 	// Add the embedded Mermaid.js and initialization at the end of the content
-	inlineScript := fmt.Sprintf("<script>%s</script><script>mermaid.initialize({startOnLoad: true});</script>", escapedMermaidJS)
+	// Initialize mermaid with theme detection
+	initScript := `
+    var isDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    mermaid.initialize({
+      startOnLoad: true,
+      theme: isDarkMode ? 'dark' : 'default',
+      flowchart: {
+        useMaxWidth: true,
+        htmlLabels: true,
+        curve: 'linear'
+      },
+      securityLevel: 'loose'
+    });
+  `
+	inlineScript := fmt.Sprintf("<script>%s</script><script>%s</script>", escapedMermaidJS, initScript)
 	
 	return htmlContent + inlineScript
 }
