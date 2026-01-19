@@ -422,7 +422,7 @@ func embedMermaidScript(htmlContent string) string {
         htmlLabels: true,
         curve: 'linear'
       },
-      securityLevel: 'loose'
+      securityLevel: 'strict'
     });
   `
 	inlineScript := fmt.Sprintf("<script>%s</script><script>%s</script>", escapedMermaidJS, initScript)
