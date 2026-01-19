@@ -32,11 +32,6 @@ var appVersion string
 // Captures: 1=prefix, 2=opening quote, 3=src path, 4=closing quote
 var imgSrcRegex = regexp.MustCompile(`(<img[^>]*\ssrc=)(["']?)([^"'\s>]+)(["']?)`)
 
-// cdnScriptRegex matches Mermaid CDN script tags followed by initialization script
-// Goldmark's mermaid extension inserts these tags that need to be replaced with embedded version
-// Pattern allows for flexible whitespace between elements
-var cdnScriptRegex = regexp.MustCompile(`<script\s+src\s*=\s*"https://cdn\.jsdelivr\.net/npm/mermaid[^"]*"\s*>\s*</script>\s*<script[^>]*>\s*mermaid\.initialize\s*\([^)]*\)\s*;\s*</script>`)
-
 //go:embed github-markdown.css
 var style string
 
