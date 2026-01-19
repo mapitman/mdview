@@ -1,9 +1,10 @@
 package main
 
 import (
+	"bytes"
 	"crypto/rand"
-	"encoding/base64"
 	_ "embed"
+	"encoding/base64"
 	"encoding/hex"
 	"errors"
 	"flag"
@@ -16,7 +17,13 @@ import (
 	"strings"
 
 	"github.com/pkg/browser"
-	"gitlab.com/golang-commonmark/markdown"
+	"github.com/yuin/goldmark"
+	"github.com/yuin/goldmark/ast"
+	"github.com/yuin/goldmark/extension"
+	"github.com/yuin/goldmark/parser"
+	"github.com/yuin/goldmark/renderer/html"
+	"github.com/yuin/goldmark/text"
+	"go.abhg.dev/goldmark/mermaid"
 )
 
 var appVersion string
@@ -30,6 +37,9 @@ var style string
 
 //go:embed template.html
 var template string
+
+//go:embed mermaid.min.js
+var mermaidJS string
 
 func main() {
 	var outfilePtr = flag.String("o", "", "Output filename. (Optional)")
@@ -57,20 +67,43 @@ func main() {
 	dat, err := os.ReadFile(inputFilename)
 	check(err)
 
-	md := markdown.New(
-		markdown.HTML(true),
-		markdown.Nofollow(true),
-		markdown.Tables(true),
-		markdown.Typographer(true))
-
-	markdownTokens := md.Parse(dat)
-	
-	// Convert relative image links to data URIs
+	// Convert relative image links to data URIs in the markdown source
 	baseDir := filepath.Dir(inputFilename)
-	processImageTokens(markdownTokens, baseDir)
+	processedMarkdown := processMarkdownImages(string(dat), baseDir)
+	processedBytes := []byte(processedMarkdown)
+
+	// Create Goldmark markdown processor with extensions
+	md := goldmark.New(
+		goldmark.WithExtensions(
+			extension.GFM,        // GitHub Flavored Markdown (includes tables)
+			extension.Typographer, // Smart quotes, dashes, etc.
+			&mermaid.Extender{
+				NoScript: true,   // Don't add CDN script tags - we'll add our own embedded version
+			},
+		),
+		goldmark.WithParserOptions(
+			parser.WithAutoHeadingID(), // Auto-generate heading IDs
+		),
+		goldmark.WithRendererOptions(
+			html.WithUnsafe(), // Allow raw HTML (equivalent to markdown.HTML(true))
+		),
+	)
+
+	// Parse markdown to AST
+	doc := md.Parser().Parse(text.NewReader(processedBytes))
 	
-	html := md.RenderTokensToString(markdownTokens)
-	title := getTitle(markdownTokens)
+	// Extract title from AST
+	title := getTitleFromAST(doc, processedBytes)
+	
+	// Render to HTML
+	var buf bytes.Buffer
+	if err := md.Renderer().Render(&buf, processedBytes, doc); err != nil {
+		log.Fatal(err)
+	}
+	htmlContent := buf.String()
+	
+	// Add embedded Mermaid.js and initialization script when diagrams are present
+	htmlContent = embedMermaidScript(htmlContent)
 
 	outfilePath := *outfilePtr
 	if outfilePath == "" {
@@ -87,7 +120,7 @@ func main() {
 		actualStyle = style
 	}
 
-	_, err = fmt.Fprintf(f, template, actualStyle, title, html)
+	_, err = fmt.Fprintf(f, template, actualStyle, title, htmlContent)
 	check(err)
 	f.Sync()
 	browser.Stderr = nil
@@ -145,68 +178,67 @@ func check(e error) {
 	}
 }
 
-func getTitle(tokens []markdown.Token) string {
-	var result string
-	if len(tokens) > 0 {
-		for i := 0; i < len(tokens); i++ {
-			if topLevelHeading, ok := tokens[i].(*markdown.HeadingOpen); ok {
-				for j := i + 1; j < len(tokens); j++ {
-					if token, ok := tokens[j].(*markdown.HeadingClose); ok && token.Lvl == topLevelHeading.Lvl {
-						break
-					}
-					result += getText(tokens[j])
-				}
-				result = strings.TrimSpace(result)
-				break
-			}
+func getTitleFromAST(doc ast.Node, source []byte) string {
+	var title string
+	ast.Walk(doc, func(n ast.Node, entering bool) (ast.WalkStatus, error) {
+		if !entering {
+			return ast.WalkContinue, nil
 		}
-	}
-	
-	return result
+		if heading, ok := n.(*ast.Heading); ok && heading.Level == 1 {
+			// Extract all text from heading and its children recursively
+			var buf bytes.Buffer
+			extractText(heading, source, &buf)
+			title = strings.TrimSpace(buf.String())
+			return ast.WalkStop, nil
+		}
+		return ast.WalkContinue, nil
+	})
+	return title
 }
 
-func getText(token markdown.Token) string {
-	switch token := token.(type) {
-	case *markdown.Text:
-		return token.Content
-	case *markdown.Inline:
-		result := ""
-		for _, token := range token.Children {
-			result += getText(token)
+// extractText recursively extracts text from a node and its children
+func extractText(node ast.Node, source []byte, buf *bytes.Buffer) {
+	for child := node.FirstChild(); child != nil; child = child.NextSibling() {
+		switch n := child.(type) {
+		case *ast.Text:
+			buf.Write(n.Segment.Value(source))
+		case *ast.String:
+			buf.Write(n.Value)
+		default:
+			// Recursively extract text from other node types (emphasis, strong, links, etc.)
+			extractText(child, source, buf)
 		}
-		return result
 	}
-	return ""
-
 }
 
 func isSnap() bool {
 	return os.Getenv("SNAP_USER_COMMON") != ""
 }
 
-// processImageTokens walks through markdown tokens and converts relative image paths to data URIs
-func processImageTokens(tokens []markdown.Token, baseDir string) {
-	for _, token := range tokens {
-		switch t := token.(type) {
-		case *markdown.Image:
-			if isRelativePath(t.Src) {
-				if dataURI := imageToDataURI(t.Src, baseDir); dataURI != "" {
-					t.Src = dataURI
-				}
-			}
-		case *markdown.HTMLInline:
-			// Process inline HTML that may contain <img> tags
-			t.Content = processHTMLImages(t.Content, baseDir)
-		case *markdown.HTMLBlock:
-			// Process block HTML that may contain <img> tags
-			t.Content = processHTMLImages(t.Content, baseDir)
-		case *markdown.Inline:
-			// Recursively process child tokens
-			if t.Children != nil {
-				processImageTokens(t.Children, baseDir)
+// processMarkdownImages processes markdown source and converts relative image paths to data URIs
+func processMarkdownImages(markdown string, baseDir string) string {
+	// Process markdown image syntax: ![alt](path)
+	imgMarkdownRegex := regexp.MustCompile(`!\[([^\]]*)\]\(([^)]+)\)`)
+	markdown = imgMarkdownRegex.ReplaceAllStringFunc(markdown, func(match string) string {
+		parts := imgMarkdownRegex.FindStringSubmatch(match)
+		if len(parts) < 3 {
+			return match
+		}
+		alt := parts[1]
+		imgPath := parts[2]
+		
+		if isRelativePath(imgPath) {
+			if dataURI := imageToDataURI(imgPath, baseDir); dataURI != "" {
+				return fmt.Sprintf("![%s](%s)", alt, dataURI)
 			}
 		}
-	}
+		return match
+	})
+	
+	// Process HTML img tags in markdown
+	markdown = processHTMLImages(markdown, baseDir)
+	
+	return markdown
 }
 
 // processHTMLImages processes HTML content and converts relative image src attributes to data URIs
@@ -358,4 +390,37 @@ func getMimeType(path string) string {
 		log.Printf("Warning: Unknown image extension %s for file %s, using image/* MIME type", ext, path)
 		return "image/*"
 	}
+}
+
+// embedMermaidScript adds the embedded Mermaid.js library to the HTML content
+// Since we set NoScript: true on the Mermaid extender, we need to manually add the script
+func embedMermaidScript(htmlContent string) string {
+	// Check if there are any mermaid diagrams in the content
+	// The Goldmark mermaid extension uses class="mermaid" for diagram blocks
+	if !strings.Contains(htmlContent, `class="mermaid"`) {
+		return htmlContent // No mermaid diagrams, don't add the script
+	}
+	
+	// Escape any </script> tags (with closing >) inside the mermaid.js code 
+	// to prevent premature script closure. The standard way is to escape the forward slash.
+	escapedMermaidJS := strings.ReplaceAll(mermaidJS, "</script>", "<\\/script>")
+	
+	// Add the embedded Mermaid.js and initialization at the end of the content
+	// Initialize mermaid with theme detection
+	initScript := `
+    var isDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    mermaid.initialize({
+      startOnLoad: true,
+      theme: isDarkMode ? 'dark' : 'default',
+      flowchart: {
+        useMaxWidth: true,
+        htmlLabels: true,
+        curve: 'linear'
+      },
+      securityLevel: 'strict'
+    });
+  `
+	inlineScript := fmt.Sprintf("<script>%s</script><script>%s</script>", escapedMermaidJS, initScript)
+	
+	return htmlContent + inlineScript
 }

@@ -1193,3 +1193,85 @@
 .markdown-body .markdown-alert.markdown-alert-caution .markdown-alert-title {
   color: var(--color-danger-fg);
 }
+
+/* Mermaid diagram styling for better visibility */
+.mermaid text,
+.mermaid tspan {
+  font-weight: 500 !important;
+  font-size: 13px !important;
+}
+
+.mermaid .label text {
+  font-weight: 600 !important;
+  font-size: 13px !important;
+}
+
+.mermaid .edgeLabel text {
+  font-weight: 500 !important;
+}
+
+@media (prefers-color-scheme: dark) {
+  .mermaid {
+    background-color: transparent;
+  }
+  
+  .mermaid text,
+  .mermaid tspan,
+  .mermaid .label text,
+  .mermaid .edgeLabel text {
+    fill: #e6edf3 !important;
+  }
+  
+  .mermaid .node rect,
+  .mermaid .node circle,
+  .mermaid .node ellipse,
+  .mermaid .node polygon,
+  .mermaid .node path {
+    stroke: #58a6ff !important;
+    stroke-width: 2px !important;
+    fill: #0d1117 !important;
+  }
+  
+  .mermaid .edgeLabel {
+    background-color: #0d1117;
+  }
+  
+  .mermaid line,
+  .mermaid path {
+    stroke: #58a6ff !important;
+    stroke-width: 2px !important;
+  }
+}
+
+@media (prefers-color-scheme: light) {
+  .mermaid {
+    background-color: transparent;
+  }
+  
+  .mermaid text,
+  .mermaid tspan,
+  .mermaid .label text,
+  .mermaid .edgeLabel text {
+    fill: #1F2328 !important;
+  }
+  
+  .mermaid .node rect,
+  .mermaid .node circle,
+  .mermaid .node ellipse,
+  .mermaid .node polygon,
+  .mermaid .node path {
+    stroke: #0550ae !important;
+    stroke-width: 2px !important;
+    fill: #ffffff !important;
+  }
+  
+  .mermaid .edgeLabel {
+    background-color: #ffffff;
+  }
+  
+  .mermaid line,
+  .mermaid path {
+    stroke: #0550ae !important;
+    stroke-width: 2px !important;
+  }
+}
