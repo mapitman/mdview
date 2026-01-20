@@ -1,4 +1,4 @@
-% MDVIEW(1) Version 1.4.0 | "Markdown View" Documentation
+% MDVIEW(1) Version XXX | "Markdown View" Documentation
 
 # NAME
 

@@ -2,23 +2,41 @@ name: Build
 
 on:
   push:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to build (e.g., 1.0.0)'
+        required: false
+        type: string
 
 jobs:
-  build:
+  build-linux:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: 'Get Previous tag'
-        id: previoustag
-        uses: "WyriHaximus/github-action-get-previous-tag@v1"
-      - name: Set version
+      - name: Determine version
+        id: version
         run: |
-          export VERSION=${{ steps.previoustag.outputs.tag }}
+          # For manual runs (workflow_dispatch) allow explicit version; otherwise use the ref name
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            VERSION="${{ github.event.inputs.version }}"
+          else
+            VERSION="${{ github.ref_name }}"
+          fi
+          # strip any leading v
+          VERSION="${VERSION#v}"
+          echo "VERSION=${VERSION}" >> $GITHUB_OUTPUT
+
+      - name: Show chosen version
+        run: |
+          echo "Resolved VERSION=${{ steps.version.outputs.VERSION }}"
       - name: Setup tools
-        run: sudo apt-get install pandoc
+        run: sudo apt-get install -y pandoc
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
           go-version: '1.21'
       - name: Build
-        run: VERSION="${{ steps.previoustag.outputs.tag }}" make all
+        run: VERSION="${{ steps.version.outputs.VERSION }}" make all
+
+

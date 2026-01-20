@@ -12,3 +12,4 @@ parts/
 package/*
 *.deb
 mdview.1
+dist/
