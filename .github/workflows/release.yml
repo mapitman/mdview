@@ -20,8 +20,8 @@ jobs:
           go-version: '1.21'
       - name: Build
         run: |
-          VERSION="${{ steps.previoustag.outputs.tag }}" make all
-          VERSION="${{ steps.previoustag.outputs.tag }}" make deb
+          VERSION="${{ steps.previoustag.outputs.tag }}" just all
+          VERSION="${{ steps.previoustag.outputs.tag }}" just deb
       - name: Release
         uses: actions/create-release@v1
         id: create_release
