@@ -96,6 +96,25 @@ To remove the package:
 sudo dpkg --remove mdview
 ```
 
+### RPM Package
+
+If you're running Fedora or another RPM-based distro, download the package and
+install it from the [Releases](https://github.com/mapitman/mdview/releases) page.
+
+```sh
+curl -s https://api.github.com/repos/mapitman/mdview/releases/latest \
+| grep "browser_download_url.*amd64.rpm" \
+| cut -d '"' -f 4 \
+| xargs curl -L -o mdview_lastest_amd64.rpm
+sudo rpm -i mdview_lastest_amd64.rpm
+```
+
+To remove the package:
+
+```sh
+sudo rpm -e mdview
+```
+
 ### Snap Package
 
 _Update: The snap package has been fixed and the latest version is now available as a snap._ 🥳
@@ -121,13 +140,14 @@ Don't have snapd?
 ### Manual Download and Install
 
 Grab the correct binary for your operating system
-[here](https://github.com/mapitman/mdview/releases/).
+[here](https://github.com/mapitman/mdview/releases/). Linux, macOS, Windows, and FreeBSD
+binaries are all published with every release.
 
 ### Compile Yourself
 
 If you have Golang installed...
 ```sh
-go get github.com/mapitman/mdview
+go install github.com/mapitman/mdview@latest
 ```
 
 Don't have Golang? [Get it now](https://golang.org/doc/install).

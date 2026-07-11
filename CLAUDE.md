@@ -10,18 +10,21 @@ no other Go source files and no test files currently in the repo.
 
 ## Build & run
 
-Requires Go (see `go.mod`/`mise.toml` for version) and, for packaging targets, `just` and `pandoc`.
+Requires Go (see `go.mod`/`mise.toml` for version) and, for packaging, `just`, `pandoc`, and
+[`goreleaser`](https://goreleaser.com/).
 
 - Quick local build: `go build` (produces `./mdview`)
 - Run directly without building: `go run . <filename.md>`
-- Full cross-platform build via `just` (uses `justfile`, the project's task runner — replaced the old Makefile):
-  - `just` or `just linux` — Linux amd64/arm64/i386 builds
-  - `just all` — linux + windows + darwin + freebsd
-  - `just deb` — build `.deb` packages (requires a prior linux build)
-  - `just snap` — build snap package via `snapcraft`
-  - `just clean` — remove build artifacts
-  - Pass `VERSION=x.y.z` as an env var to any target to stamp the version (embedded via `-ldflags -X main.appVersion=...`); CI derives this from the previous git tag.
-  - `just manpage` regenerates `mdview.1` from `mdview.1.md` via pandoc.
+- Full cross-platform build + packaging via `just` (uses `justfile`, which thinly wraps
+  `goreleaser`; config lives in `.goreleaser.yaml`):
+  - `just` or `just build` — cross-compiles all platform binaries via `goreleaser build --snapshot` (linux amd64/arm64/386, windows amd64, darwin amd64/arm64, freebsd amd64)
+  - `just release-snapshot` — full local dry run producing archives + `.deb`/`.rpm` packages in `dist/` without publishing
+  - `just release` — the real release (`goreleaser release --clean`); publishes a draft GitHub release, run from CI on tag push
+  - `just check` — validates `.goreleaser.yaml`
+  - `just snap` — build snap package via `snapcraft` (kept separate; goreleaser doesn't build snaps)
+  - `just clean` — remove build artifacts (`dist/`, `mdview.1`, `*.snap`)
+  - `just manpage` regenerates `mdview.1` from `mdview.1.md` via pandoc; goreleaser runs this automatically as a `before.hooks` step.
+  - Versioning is read directly from git tags by goreleaser (embedded via `-ldflags -X main.appVersion={{.Version}}`) — there's no `VERSION` env var to pass anymore.
 - There is no test suite and no lint target configured; `go vet ./...` and `gofmt` are reasonable sanity checks before committing.
 
 ## Architecture
@@ -46,8 +49,13 @@ Output location resolution order: `MDVIEW_DIR` env var → (if running as a Snap
 
 ### Packaging
 
-`justfile`, `control` (Debian control file template, `VERSION` substituted at build time), `mdview.1.md`
-(man page source) and `snap/` all support the release pipeline in `.github/workflows/release.yml`,
-which triggers on tag push, builds all platform targets + deb packages via `just`, and publishes a
-draft GitHub release with `softprops/action-gh-release`. `.github/workflows/build.yml` runs the same
-`just all` build on every push as a CI check (no tests to run).
+`.goreleaser.yaml` drives cross-platform binary builds, archives (`.tar.gz`/`.zip`), and `.deb`/
+`.rpm` packages (via goreleaser's built-in `nfpm` integration — no more hand-rolled `control` file
+or `dpkg-deb` invocation). `justfile` wraps the `goreleaser` CLI so `just <target>` stays the single
+local entry point. `mdview.1.md` (man page source) and `snap/` (built separately via `just snap`,
+outside goreleaser) round out packaging.
+
+`.github/workflows/release.yml` triggers on tag push, runs `just release`, and publishes a draft
+GitHub release (goreleaser reads the version straight from the pushed git tag — no more
+previous-tag lookup step). `.github/workflows/build.yml` runs `just build` (a `goreleaser build
+--snapshot`) on every push as a CI sanity check (no tests to run).

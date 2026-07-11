@@ -13,9 +13,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - name: 'Get Previous tag'
-        id: previoustag
-        uses: "WyriHaximus/github-action-get-previous-tag@v2"
+        with:
+          fetch-depth: 0
       - name: Setup tools
         run: sudo apt-get install pandoc
       - name: Set up Go
@@ -24,24 +23,11 @@ jobs:
           go-version-file: 'go.mod'
       - name: Install just
         uses: extractions/setup-just@v4
-      - name: Build
-        run: |
-          VERSION="${{ steps.previoustag.outputs.tag }}" just all
-          VERSION="${{ steps.previoustag.outputs.tag }}" just deb
-      - name: Release
-        uses: softprops/action-gh-release@v2
+      - name: Install goreleaser
+        uses: goreleaser/goreleaser-action@v6
         with:
-          draft: true
-          prerelease: false
-          name: ${{ steps.previoustag.outputs.tag }}
-          tag_name: ${{ steps.previoustag.outputs.tag }}
-          files: |
-            mdview-${{ steps.previoustag.outputs.tag }}-linux-amd64.tar.gz
-            mdview-${{ steps.previoustag.outputs.tag }}-linux-i386.tar.gz
-            mdview-${{ steps.previoustag.outputs.tag }}-linux-arm64.tar.gz
-            mdview-${{ steps.previoustag.outputs.tag }}-darwin-amd64.tar.gz
-            mdview-${{ steps.previoustag.outputs.tag }}-darwin-arm64.tar.gz
-            mdview-${{ steps.previoustag.outputs.tag }}-windows-amd64.zip
-            mdview-${{ steps.previoustag.outputs.tag }}-freebsd-amd64.tar.gz
-            mdview_${{ steps.previoustag.outputs.tag }}_amd64.deb
-            mdview_${{ steps.previoustag.outputs.tag }}_arm64.deb
+          install-only: true
+      - name: Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: just release
