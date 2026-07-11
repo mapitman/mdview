@@ -8,12 +8,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - name: 'Get Previous tag'
-        id: previoustag
-        uses: "WyriHaximus/github-action-get-previous-tag@v2"
-      - name: Set version
-        run: |
-          export VERSION=${{ steps.previoustag.outputs.tag }}
+        with:
+          fetch-depth: 0
       - name: Setup tools
         run: sudo apt-get install pandoc
       - name: Set up Go
@@ -22,6 +18,9 @@ jobs:
           go-version-file: 'go.mod'
       - name: Install just
         uses: extractions/setup-just@v4
+      - name: Install goreleaser
+        uses: goreleaser/goreleaser-action@v6
+        with:
+          install-only: true
       - name: Build
-        run: VERSION="${{ steps.previoustag.outputs.tag }}" just all
-
+        run: just build

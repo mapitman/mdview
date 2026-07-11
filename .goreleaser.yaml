@@ -1,0 +1,78 @@
+version: 2
+
+before:
+  hooks:
+    - just manpage
+
+builds:
+  - id: mdview
+    main: .
+    binary: mdview
+    ldflags:
+      - -s -w -X main.appVersion={{.Version}}
+    goos:
+      - linux
+      - windows
+      - darwin
+      - freebsd
+    goarch:
+      - amd64
+      - arm64
+    ignore:
+      - goos: windows
+        goarch: arm64
+      - goos: freebsd
+        goarch: arm64
+
+  - id: mdview-linux-386
+    main: .
+    binary: mdview
+    ldflags:
+      - -s -w -X main.appVersion={{.Version}}
+    goos:
+      - linux
+    goarch:
+      - "386"
+
+archives:
+  - id: mdview
+    ids:
+      - mdview
+      - mdview-linux-386
+    name_template: "mdview-{{.Version}}-{{.Os}}-{{.Arch}}"
+    formats:
+      - tar.gz
+    format_overrides:
+      - goos: windows
+        formats:
+          - zip
+    files:
+      - mdview.1
+
+nfpms:
+  - id: mdview
+    ids:
+      - mdview
+    package_name: mdview
+    file_name_template: "mdview_{{.Version}}_{{.Arch}}"
+    vendor: bugzapperlabs.com
+    maintainer: bugzapperlabs.com
+    description: "Markdown View - Command line utility to format markdown and launch it in a browser."
+    section: custom
+    priority: optional
+    formats:
+      - deb
+      - rpm
+    bindir: /usr/bin
+    contents:
+      - src: mdview.1
+        dst: /usr/share/man/man1/mdview.1
+
+checksum:
+  name_template: "checksums.txt"
+
+release:
+  draft: true
+
+changelog:
+  disable: true

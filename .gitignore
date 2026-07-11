@@ -1,15 +1,13 @@
-bin/*
 mdview
 mdview.exe
+dist/
 *.tar.gz
-freebsd-amd64.tar.gz
-linux-amd64.tar.gz
 *.zip
 prime/
 parts/
 .snapcraft
 *.snap
-package/*
 *.deb
+*.rpm
 mdview.1
 mise.toml
