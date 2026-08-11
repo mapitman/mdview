@@ -1,0 +1,14 @@
+{
+  "format": "mdview-theme",
+  "version": 1,
+  "name": "example corporate theme",
+  "site": "example.com",
+  "logo": "https://example.com/logo.svg",
+  "bg": "#FFFFFF",
+  "text": "#1A1A1A",
+  "accent": "#7C88FC",
+  "accent2": "#FF8562",
+  "surface": "#F5F5F7",
+  "line": "#E6E6E6",
+  "fonts": ["Manrope", "Roboto", "Arial"]
+}
