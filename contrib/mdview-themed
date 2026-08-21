@@ -1,0 +1,222 @@
+#!/usr/bin/env bash
+# mdview-themed <file.md> — render markdown (with mermaid diagrams) in the browser, offline,
+# using a corporate theme installed from a JSON file.
+#
+# Themes:
+#   mdview-themed --install-theme <theme.json>  install a theme (export one with the
+#                                               Style Inspector Chrome extension, see
+#                                               contrib/chrome-extension)
+#   mdview-themed --reset-theme                 restore the built-in dark theme
+#   mdview-themed --show-theme                  print the active theme
+# theme.json format:
+#   {"bg","text","accent","accent2","surface","line","fonts":[],"logo","site","name"}
+set -euo pipefail
+LIB="$HOME/.local/share/mdview-themed"
+CONF="$HOME/.config/mdview-themed"
+THEME_JSON="$CONF/theme.json"
+
+usage(){ echo "usage: mdview-themed <file.md> | --install-theme <theme.json> | --reset-theme | --show-theme"; exit 1; }
+[ $# -lt 1 ] && usage
+
+case "$1" in
+  --install-theme)
+    [ $# -lt 2 ] && usage
+    SRC_THEME="$2"
+    [ ! -f "$SRC_THEME" ] && { echo "no such file: $SRC_THEME"; exit 1; }
+    python3 - "$SRC_THEME" <<'PY' || { echo "error: not an mdview theme (bg/text keys required)"; exit 1; }
+import json,sys
+t=json.load(open(sys.argv[1]))
+assert isinstance(t,dict) and t.get("bg") and t.get("text")
+PY
+    mkdir -p "$CONF"
+    cp "$SRC_THEME" "$THEME_JSON"
+    rm -f "$CONF"/logo.*
+    LOGO_URL="$(python3 -c 'import json,sys;print(json.load(open(sys.argv[1])).get("logo") or "")' "$THEME_JSON")"
+    if [ -n "$LOGO_URL" ]; then
+      case "$LOGO_URL" in
+        data:image/svg*) python3 - "$LOGO_URL" > "$CONF/logo.svg" <<'PY'
+import sys,base64,urllib.parse
+u=sys.argv[1]; meta,payload=u.split(",",1)
+data=base64.b64decode(payload) if ";base64" in meta else urllib.parse.unquote(payload).encode()
+sys.stdout.buffer.write(data)
+PY
+          ;;
+        data:image/png*)  python3 -c 'import sys,base64;sys.stdout.buffer.write(base64.b64decode(sys.argv[1].split(",",1)[1]))' "$LOGO_URL" > "$CONF/logo.png" ;;
+        http*)
+          EXT="${LOGO_URL##*.}"; EXT="${EXT%%\?*}"
+          case "$EXT" in svg|png|jpg|jpeg|webp|gif|ico) ;; *) EXT=png ;; esac
+          curl -fsSL --max-time 15 -o "$CONF/logo.$EXT" "$LOGO_URL" \
+            || echo "warning: could not download logo ($LOGO_URL), rendering without it"
+          ;;
+      esac
+    fi
+    echo "theme installed: $THEME_JSON"
+    python3 -c 'import json,sys;t=json.load(open(sys.argv[1]));print("  site:",t.get("site","-"));print("  bg:",t["bg"],"text:",t["text"],"accent:",t.get("accent","-"))' "$THEME_JSON"
+    exit 0 ;;
+  --reset-theme)
+    rm -f "$THEME_JSON" "$CONF"/logo.*
+    echo "built-in dark theme restored"
+    exit 0 ;;
+  --show-theme)
+    if [ -f "$THEME_JSON" ]; then cat "$THEME_JSON"; else echo "built-in dark theme is active"; fi
+    exit 0 ;;
+  -*) usage ;;
+esac
+
+SRC="$1"
+[ ! -f "$SRC" ] && { echo "no such file: $SRC"; exit 1; }
+
+# theme tokens (defaults: neutral dark)
+T_BG="#1A1A1A"; T_TEXT="#FFFFFF"; T_ACCENT="#7C88FC"; T_ACCENT2="#FF8562"
+T_SURFACE="#000000"; T_LINE="#3A3A3A"
+T_FONTS="system-ui,Arial,sans-serif"
+T_SITE=""
+LOGO_FILE=""; LOGO_MIME="image/svg+xml"
+
+if [ -f "$THEME_JSON" ]; then
+  eval "$(python3 - "$THEME_JSON" <<'PY'
+import json,sys,shlex
+t=json.load(open(sys.argv[1]))
+d={"bg":"#1A1A1A","text":"#FFFFFF","accent":"#7C88FC","accent2":"#FF8562",
+   "surface":"#000000","line":"#3A3A3A"}
+def g(k): return t.get(k) or d[k]
+fonts=t.get("fonts") or []
+stack=",".join(f"'{f}'" for f in fonts[:3]) + ("," if fonts else "") + "Arial,sans-serif"
+site=t.get("site") or ""
+if site and not site.startswith("http"): site="https://"+site
+print(f'T_BG={shlex.quote(g("bg"))}')
+print(f'T_TEXT={shlex.quote(g("text"))}')
+print(f'T_ACCENT={shlex.quote(g("accent"))}')
+print(f'T_ACCENT2={shlex.quote(g("accent2"))}')
+print(f'T_SURFACE={shlex.quote(g("surface"))}')
+print(f'T_LINE={shlex.quote(g("line"))}')
+print(f'T_FONTS={shlex.quote(stack)}')
+print(f'T_SITE={shlex.quote(site)}')
+PY
+)"
+  CUSTOM_LOGO="$(ls "$CONF"/logo.* 2>/dev/null | head -1 || true)"
+  if [ -n "$CUSTOM_LOGO" ]; then
+    LOGO_FILE="$CUSTOM_LOGO"
+    case "$CUSTOM_LOGO" in
+      *.svg) LOGO_MIME="image/svg+xml" ;;
+      *.png) LOGO_MIME="image/png" ;;
+      *.jpg|*.jpeg) LOGO_MIME="image/jpeg" ;;
+      *.webp) LOGO_MIME="image/webp" ;;
+      *.gif) LOGO_MIME="image/gif" ;;
+      *.ico) LOGO_MIME="image/x-icon" ;;
+    esac
+  fi
+fi
+
+OUT="$(mktemp --suffix=.html)"
+TITLE="$(basename "$SRC")"
+
+# markdown -> base64 so special characters survive HTML embedding
+MD_B64="$(base64 -w0 "$SRC")"
+
+LOGO_HTML=""
+if [ -n "$LOGO_FILE" ] && [ -f "$LOGO_FILE" ]; then
+  LOGO_B64="$(base64 -w0 "$LOGO_FILE")"
+  LOGO_HTML="<a href=\"${T_SITE:-#}\"><img alt=\"logo\" src=\"data:${LOGO_MIME};base64,${LOGO_B64}\"></a>"
+fi
+
+# mermaid needs to know whether the background is dark
+IS_DARK="$(python3 -c '
+import sys
+h=sys.argv[1].lstrip("#")
+r,g,b=(int(h[i:i+2],16) for i in (0,2,4))
+print(1 if (0.299*r+0.587*g+0.114*b)/255<0.5 else 0)' "$T_BG")"
+
+{
+cat <<HTML
+<!doctype html><html><head><meta charset="utf-8">
+<title>${TITLE}</title>
+<style>
+  :root{
+    --t-bg:${T_BG};
+    --t-ink:${T_TEXT};
+    --t-deep:${T_SURFACE};
+    --t-accent:${T_ACCENT};
+    --t-accent2:${T_ACCENT2};
+    --t-line:${T_LINE};
+    --t-font:${T_FONTS};
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--t-bg);color:var(--t-ink);
+    font-family:var(--t-font);font-size:16px;line-height:1.6;}
+  .t-header{display:flex;align-items:center;gap:15px;
+    max-width:980px;margin:0 auto;padding:18px 40px 12px;
+    border-bottom:2px solid var(--t-accent);}
+  .t-header a{background:#FFFFFF;border-radius:8px;padding:5px 10px;display:block;}
+  .t-header img{height:32px;display:block;}
+  .t-header .t-doc{margin-left:auto;font-size:12px;color:var(--t-ink);
+    background:var(--t-deep);border:1px solid var(--t-accent);border-radius:6px;
+    padding:2px 10px;}
+  .markdown-body{max-width:980px;margin:0 auto;padding:16px 40px 48px;}
+  h1,h2,h3,h4,h5,h6{color:var(--t-ink);font-weight:700;line-height:1.25;
+    margin:1.4em 0 .5em;}
+  h1{font-size:2em;border-bottom:1px solid var(--t-line);padding-bottom:8px;}
+  h2{font-size:1.5em;border-bottom:1px solid var(--t-line);padding-bottom:6px;}
+  h3{font-size:1.25em;}
+  a{color:var(--t-accent);text-decoration:none;}
+  a:hover{color:var(--t-accent2);text-decoration:underline;}
+  code{font-family:monospace;font-size:.875em;
+    background:var(--t-deep);color:var(--t-ink);border-radius:5px;padding:2px 5px;}
+  pre{background:var(--t-deep);border:1px solid var(--t-line);border-radius:10px;
+    padding:15px 18px;overflow:auto;}
+  pre code{background:transparent;color:var(--t-ink);padding:0;font-size:.875em;border:none;}
+  blockquote{margin:15px 0;padding:8px 18px;color:var(--t-ink);
+    border-left:5px solid var(--t-accent2);background:var(--t-deep);border-radius:0 8px 8px 0;}
+  blockquote p{margin:6px 0;}
+  table{border-collapse:collapse;margin:15px 0;display:block;overflow-x:auto;max-width:100%;}
+  th,td{border:1px solid var(--t-line);padding:6px 12px;}
+  th{background:var(--t-accent);color:#FFFFFF;font-weight:600;text-align:left;}
+  tr:nth-child(even) td{background:var(--t-deep);}
+  hr{border:none;border-top:2px solid var(--t-accent);margin:24px 0;}
+  img{max-width:100%;}
+  ul,ol{padding-left:24px;}
+  li{margin:2px 0;}
+  li::marker{color:var(--t-accent);}
+  .mermaid{background:transparent;text-align:center;margin:16px 0;}
+</style>
+<script>$(cat "$LIB/marked.min.js")</script>
+<script>$(cat "$LIB/mermaid.min.js")</script>
+</head><body>
+<header class="t-header">
+  ${LOGO_HTML}
+  <span class="t-doc">${TITLE}</span>
+</header>
+<article class="markdown-body" id="content"></article>
+<script>
+  const md = decodeURIComponent(escape(atob("${MD_B64}")));
+  // extract mermaid blocks before the main render
+  marked.use({ renderer: {
+    code(token){
+      const t = (typeof token==='object')?token.text:token;
+      const lang = (typeof token==='object')?token.lang:arguments[1];
+      if(lang==='mermaid'){ return '<pre class="mermaid">'+t+'</pre>'; }
+      return false;
+    }
+  }});
+  document.getElementById('content').innerHTML = marked.parse(md);
+  const isDark = ${IS_DARK} === 1;
+  mermaid.initialize({ startOnLoad:false, securityLevel:'loose',
+    theme:'base', themeVariables:{
+      darkMode:isDark,
+      primaryColor:'${T_ACCENT}', primaryTextColor:'#FFFFFF', primaryBorderColor:'${T_ACCENT}',
+      lineColor:'${T_TEXT}', secondaryColor:'${T_ACCENT2}', tertiaryColor:'${T_SURFACE}',
+      background:'${T_BG}', mainBkg:'${T_ACCENT}', textColor:'${T_TEXT}',
+      fontFamily:"${T_FONTS}"
+    }});
+  mermaid.run({ querySelector:'.mermaid' });
+</script>
+</body></html>
+HTML
+} > "$OUT"
+
+if command -v xdg-open >/dev/null 2>&1; then
+  (xdg-open "$OUT" >/dev/null 2>&1 &)
+elif command -v open >/dev/null 2>&1; then
+  (open "$OUT" >/dev/null 2>&1 &)
+fi
+echo "opened: $OUT"

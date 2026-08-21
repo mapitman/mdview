@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-size: 13px;
+    background: #0f0f13;
+    color: #e0e0e0;
+    width: 380px;
+    max-height: 580px;
+    overflow-y: auto;
+  }
+  header {
+    padding: 14px 16px 10px;
+    border-bottom: 1px solid #222;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  header h1 { font-size: 14px; font-weight: 600; color: #fff; letter-spacing: 0.3px; }
+  header span { font-size: 11px; color: #555; }
+  #status { padding: 20px 16px; color: #888; font-size: 12px; }
+
+  section { padding: 10px 16px; border-bottom: 1px solid #1a1a1a; }
+  section h2 {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: #555;
+    margin-bottom: 8px;
+  }
+
+  /* Logo */
+  .logo-row { display: flex; align-items: center; gap: 8px; }
+  .logo-preview { max-height: 32px; max-width: 120px; border-radius: 4px; background: #fff; padding: 2px; }
+  .logo-url {
+    font-size: 11px; color: #6eb5ff; word-break: break-all;
+    text-decoration: none; flex: 1;
+  }
+  .logo-url:hover { text-decoration: underline; }
+
+  /* Colors */
+  .color-grid { display: flex; flex-wrap: wrap; gap: 6px; }
+  .color-chip {
+    display: flex; align-items: center; gap: 5px;
+    padding: 4px 8px 4px 4px;
+    background: #1a1a1f;
+    border-radius: 6px;
+    cursor: pointer;
+    border: 1px solid #2a2a2a;
+    transition: border-color 0.15s;
+  }
+  .color-chip:hover { border-color: #444; }
+  .color-swatch { width: 20px; height: 20px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.08); }
+  .color-hex { font-size: 11px; font-family: monospace; color: #ccc; }
+
+  /* Fonts */
+  .font-list { display: flex; flex-direction: column; gap: 4px; }
+  .font-item {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 5px 8px;
+    background: #1a1a1f;
+    border-radius: 6px;
+    border: 1px solid #222;
+  }
+  .font-name { font-size: 12px; color: #ddd; }
+  .font-sample { font-size: 14px; color: #888; }
+
+  /* Paddings */
+  .padding-row { display: flex; flex-wrap: wrap; gap: 5px; }
+  .pad-chip {
+    padding: 3px 8px;
+    background: #1a1a1f;
+    border: 1px solid #2a2a2a;
+    border-radius: 4px;
+    font-size: 11px;
+    font-family: monospace;
+    color: #aaa;
+  }
+
+  /* Copy block */
+  .copy-section {
+    padding: 10px 16px 14px;
+    display: flex; flex-direction: column; gap: 6px;
+  }
+  #copy-text {
+    width: 100%;
+    background: #1a1a1f;
+    border: 1px solid #2a2a2a;
+    color: #ccc;
+    font-size: 11px;
+    font-family: monospace;
+    padding: 8px;
+    border-radius: 6px;
+    resize: none;
+    height: 100px;
+    line-height: 1.5;
+  }
+  #copy-btn {
+    align-self: flex-end;
+    padding: 6px 16px;
+    background: #3b82f6;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  #copy-btn:hover { background: #2563eb; }
+  #copy-btn.copied { background: #16a34a; }
+
+  .section-label-bg { color: #f97316; }
+  .section-label-text { color: #60a5fa; }
+  .none { color: #444; font-size: 11px; }
+
+  /* Toolbar: export / import / mdview */
+  .toolbar {
+    display: flex; gap: 6px; flex-wrap: wrap;
+    padding: 10px 16px;
+    border-bottom: 1px solid #1a1a1a;
+  }
+  .toolbar button {
+    flex: 1;
+    padding: 6px 8px;
+    background: #1a1a1f;
+    color: #ddd;
+    border: 1px solid #2a2a2a;
+    border-radius: 6px;
+    font-size: 11px;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+    white-space: nowrap;
+  }
+  .toolbar button:hover { border-color: #444; background: #22222a; }
+  .toolbar #mdview-btn { background: #7C88FC; border-color: #7C88FC; color: #fff; font-weight: 600; }
+  .toolbar #mdview-btn:hover { background: #6875fb; }
+  #toolbar-hint {
+    display: none;
+    margin: 0 16px 10px;
+    padding: 6px 8px;
+    background: #1a1a1f;
+    border: 1px solid #2a2a2a;
+    border-radius: 6px;
+    font-family: monospace;
+    font-size: 10.5px;
+    color: #9aa4ff;
+    word-break: break-all;
+  }
+  .badge-imported { font-size: 10px; color: #FF8562; margin-left: 6px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Style Inspector</h1>
+  <span id="domain"></span>
+</header>
+<div id="status">Анализирую страницу...</div>
+<div class="toolbar">
+  <button id="export-btn" title="Сохранить стиль в JSON-файл">Экспорт стиля</button>
+  <button id="import-btn" title="Загрузить стиль из JSON-файла">Импорт стиля</button>
+  <button id="mdview-btn" title="Скачать тему для mdview">Внедрить в mdview</button>
+  <input type="file" id="import-file" accept=".json,application/json" style="display:none">
+</div>
+<div id="toolbar-hint"></div>
+<div id="content" style="display:none">
+  <section id="sec-logo">
+    <h2>Логотип</h2>
+    <div id="logo-content"></div>
+  </section>
+  <section>
+    <h2 class="section-label-bg">Цвета фона</h2>
+    <div class="color-grid" id="bg-colors"></div>
+  </section>
+  <section>
+    <h2 class="section-label-text">Цвета текста</h2>
+    <div class="color-grid" id="text-colors"></div>
+  </section>
+  <section>
+    <h2>Шрифты</h2>
+    <div class="font-list" id="fonts"></div>
+  </section>
+  <section>
+    <h2>Отступы (padding)</h2>
+    <div class="padding-row" id="paddings"></div>
+  </section>
+  <div class="copy-section">
+    <textarea id="copy-text" readonly></textarea>
+    <button id="copy-btn">Скопировать</button>
+  </div>
+</div>
+<script src="popup.js"></script>
+</body>
+</html>

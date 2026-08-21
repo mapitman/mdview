@@ -5,6 +5,14 @@
 
 A lightweight command-line tool that converts markdown files to styled HTML and opens them in your default browser. Supports GitHub Flavored Markdown, Mermaid diagrams, embedded images, and automatic theme detection.
 
+> **This fork adds corporate theming tools** (see [`contrib/`](contrib/README.md)):
+> **Style Inspector**, a Chrome extension that extracts any website's design
+> tokens (logo, colors, fonts, paddings) and exports them as a theme file, plus
+> **mdview-themed**, an offline bash viewer that renders markdown in that
+> style — your company's colors, fonts and logo on every document, mermaid
+> diagrams re-colored to match. Themes are plain JSON files you can save,
+> share and install with one command.
+
 ## Features
 
 - **GitHub Flavored Markdown** - Full support for tables, task lists, strikethrough, and more
