@@ -19,6 +19,19 @@ A lightweight command-line tool that converts markdown files to styled HTML and 
 
 ## Usage
 
+Pass a filename, or a single dash to read markdown from standard input:
+
+```sh
+mdview notes.md
+cat notes.md | mdview -
+age -d -i ~/.config/age/key.txt notes.md.age | mdview -
+```
+
+Reading from standard input avoids writing the markdown to disk first,
+which is useful when the content is decrypted or generated on the fly.
+Relative image paths are then resolved against the current working
+directory.
+
 By default, `mdview` writes the generated HTML to a temporary directory.
 It tries these in order:
 - A path defined in the `MDVIEW_DIR` environment variable

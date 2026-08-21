@@ -9,6 +9,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"io"
 	"io/fs"
 	"log"
 	"os"
@@ -59,16 +60,28 @@ func main() {
 	}
 
 	if inputFilename == "" || *helpPtr {
-		os.Stderr.WriteString("Usage:\nmdview [options] <filename>\nFormats markdown and launches it in a browser.\nIf the environment variable MDVIEW_DIR is set, the temporary file will be written there.\n")
+		os.Stderr.WriteString("Usage:\nmdview [options] <filename>\nFormats markdown and launches it in a browser.\nUse - as the filename to read markdown from standard input.\nIf the environment variable MDVIEW_DIR is set, the temporary file will be written there.\n")
 		flag.PrintDefaults()
 		os.Exit(1)
 	}
 
-	dat, err := os.ReadFile(inputFilename)
-	check(err)
+	// A filename of - means read the markdown from standard input. Relative image
+	// paths are then resolved against the working directory, as there is no input
+	// file to anchor them to.
+	var dat []byte
+	var err error
+	baseDir := "."
+
+	if inputFilename == "-" {
+		dat, err = io.ReadAll(os.Stdin)
+		check(err)
+	} else {
+		dat, err = os.ReadFile(inputFilename)
+		check(err)
+		baseDir = filepath.Dir(inputFilename)
+	}
 
 	// Convert relative image links to data URIs in the markdown source
-	baseDir := filepath.Dir(inputFilename)
 	processedMarkdown := processMarkdownImages(string(dat), baseDir)
 	processedBytes := []byte(processedMarkdown)
 

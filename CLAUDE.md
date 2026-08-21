@@ -31,7 +31,7 @@ Requires Go (see `go.mod`/`mise.toml` for version) and, for packaging, `just`, `
 
 Everything happens in `main()` in `main.go`, in a straight-line pipeline:
 
-1. **Flag parsing** — `-o`, `-v/-version`, `-h/-help`, `-b/-bare`. First positional arg is the input markdown file.
+1. **Flag parsing** — `-o`, `-v/-version`, `-h/-help`, `-b/-bare`. First positional arg is the input markdown file; a single `-` reads the markdown from stdin instead, in which case `baseDir` for image resolution is the working directory rather than the input file's directory.
 2. **Image inlining** (`processMarkdownImages` → `processHTMLImages`/markdown image regex + `imageToDataURI`) — rewrites relative image references (both `![]()`  markdown syntax and raw `<img src=...>` HTML) into base64 `data:` URIs *before* markdown parsing, so the output HTML is fully self-contained/offline-viewable. This includes path-traversal guards (caps `..` traversal depth) and a 10MB per-image size cap.
 3. **Markdown parsing** via Goldmark, configured with:
    - `extension.GFM` (tables, task lists, strikethrough, etc.)
