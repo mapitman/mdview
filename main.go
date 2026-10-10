@@ -230,8 +230,8 @@ func isSnap() bool {
 
 // processMarkdownImages processes markdown source and converts relative image paths to data URIs
 func processMarkdownImages(markdown string, baseDir string) string {
-	// Process markdown image syntax: ![alt](path)
-	imgMarkdownRegex := regexp.MustCompile(`!\[([^\]]*)\]\(([^)]+)\)`)
+	// Process markdown image syntax: ![alt](path "optional title")
+	imgMarkdownRegex := regexp.MustCompile(`!\[([^\]]*)\]\(([^)\s]+)(\s+(?:"[^"]*"|'[^']*'|\([^)]*\)))?\)`)
 	markdown = imgMarkdownRegex.ReplaceAllStringFunc(markdown, func(match string) string {
 		parts := imgMarkdownRegex.FindStringSubmatch(match)
 		if len(parts) < 3 {
@@ -239,10 +239,11 @@ func processMarkdownImages(markdown string, baseDir string) string {
 		}
 		alt := parts[1]
 		imgPath := parts[2]
+		title := parts[3]
 		
 		if isRelativePath(imgPath) {
 			if dataURI := imageToDataURI(imgPath, baseDir); dataURI != "" {
-				return fmt.Sprintf("![%s](%s)", alt, dataURI)
+				return fmt.Sprintf("![%s](%s%s)", alt, dataURI, title)
 			}
 		}
 		return match
