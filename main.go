@@ -184,7 +184,8 @@ func check(e error) {
 		if isSnap() {
 			fmt.Println("Since mdview was installed as a Snap, it can only access files in your HOME directory.")
 			fmt.Println("If you need to use it with files outside of your HOME directory, choose a different installation method.")
-			fmt.Println("https://github.com/mapitman/mdview?tab=readme-ov-file#installation\n")
+			fmt.Println("https://github.com/mapitman/mdview?tab=readme-ov-file#installation")
+			fmt.Println()
 		}
 
 		log.Fatal(e)
