@@ -48,6 +48,8 @@ archives:
           - zip
     files:
       - mdview.1
+      - LICENSE
+      - README.md
 
 nfpms:
   - id: mdview
@@ -58,7 +60,9 @@ nfpms:
     vendor: bugzapperlabs.com
     maintainer: bugzapperlabs.com
     description: "Markdown View - Command line utility to format markdown and launch it in a browser."
-    section: custom
+    section: utils
+    license: MIT
+    homepage: https://github.com/mapitman/mdview
     priority: optional
     formats:
       - deb
