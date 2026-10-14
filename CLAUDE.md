@@ -56,7 +56,7 @@ file with a mermaid block (light and dark mode), and commit the new file.
 
 ### Packaging
 
-`.goreleaser.yaml` drives cross-platform binary builds, archives (`.tar.gz`/`.zip`), and `.deb`/
+`.goreleaser.yaml` drives cross-platform binary builds, archives (`.tar.gz`/`.zip`, each with `LICENSE`, `README.md` and the man page), and `.deb`/
 `.rpm` packages (via goreleaser's built-in `nfpm` integration — no more hand-rolled `control` file
 or `dpkg-deb` invocation). `justfile` wraps the `goreleaser` CLI so `just <target>` stays the single
 local entry point. `mdview.1.md` (man page source) and `snap/` (built separately via `just snap`,
