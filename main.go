@@ -65,28 +65,46 @@ func main() {
 	flag.BoolVar(helpPtr, "h", false, "Prints mdview help message.")
 	flag.BoolVar(barePtr, "b", false, "Bare HTML with no style applied.")
 
-	flag.Parse()
-	inputFilename := flag.Arg(0)
+	flag.Usage = func() { printUsage(os.Stderr) }
+	args, err := parseFlags(flag.CommandLine, os.Args[1:])
+	if err != nil {
+		os.Exit(2)
+	}
 
 	if *versionPtr {
 		fmt.Println(appVersion)
 		os.Exit(0)
 	}
 
-	if inputFilename == "" || *helpPtr {
-		os.Stderr.WriteString("Usage:\nmdview [options] <filename>\nFormats markdown and launches it in a browser.\nUse - as the filename to read markdown from standard input.\nIf the environment variable MDVIEW_DIR is set, the temporary file will be written there.\n")
-		flag.PrintDefaults()
+	if *helpPtr {
+		printUsage(os.Stdout)
+		os.Exit(0)
+	}
+
+	if len(args) == 0 {
+		printUsage(os.Stderr)
 		os.Exit(1)
 	}
+
+	if len(args) > 1 {
+		fmt.Fprintf(os.Stderr, "mdview accepts one filename, but received %d: %s\n\n", len(args), strings.Join(args, " "))
+		printUsage(os.Stderr)
+		os.Exit(1)
+	}
+
+	inputFilename := args[0]
 
 	// A filename of - means read the markdown from standard input. Relative image
 	// paths are then resolved against the working directory, as there is no input
 	// file to anchor them to.
 	var dat []byte
-	var err error
 	baseDir := "."
 
 	if inputFilename == "-" {
+		if stdinIsTerminal() {
+			fmt.Fprintln(os.Stderr, "mdview: no markdown on standard input. Pipe markdown into mdview or pass a filename.")
+			os.Exit(1)
+		}
 		dat, err = io.ReadAll(os.Stdin)
 		check(err)
 	} else {
@@ -135,6 +153,40 @@ func main() {
 	browser.Stdout = nil
 	err = browser.OpenFile(outfilePath)
 	check(err)
+}
+
+// printUsage writes the usage text and the option defaults to w
+func printUsage(w io.Writer) {
+	fmt.Fprint(w, "Usage:\nmdview [options] <filename>\nFormats markdown and launches it in a browser.\nUse - as the filename to read markdown from standard input.\nIf the environment variable MDVIEW_DIR is set, the temporary file will be written there.\n")
+	flag.CommandLine.SetOutput(w)
+	flag.PrintDefaults()
+}
+
+// parseFlags parses args and returns the positional arguments. Unlike FlagSet.Parse
+// alone, it accepts flags before, between and after the positional arguments.
+// Everything after a -- argument is positional.
+func parseFlags(fs *flag.FlagSet, args []string) ([]string, error) {
+	var positional []string
+	for {
+		if err := fs.Parse(args); err != nil {
+			return nil, err
+		}
+		consumed := len(args) - fs.NArg()
+		if consumed > 0 && args[consumed-1] == "--" {
+			return append(positional, fs.Args()...), nil
+		}
+		if fs.NArg() == 0 {
+			return positional, nil
+		}
+		positional = append(positional, fs.Arg(0))
+		args = fs.Args()[1:]
+	}
+}
+
+// stdinIsTerminal reports whether standard input is an interactive terminal
+func stdinIsTerminal() bool {
+	info, err := os.Stdin.Stat()
+	return err == nil && info.Mode()&os.ModeCharDevice != 0
 }
 
 func tempFileName(prefix, suffix string) string {
