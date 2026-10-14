@@ -13,6 +13,8 @@ import (
 	"io"
 	"io/fs"
 	"log"
+	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -23,16 +25,28 @@ import (
 	"github.com/yuin/goldmark/ast"
 	"github.com/yuin/goldmark/extension"
 	"github.com/yuin/goldmark/parser"
+	"github.com/yuin/goldmark/renderer"
 	"github.com/yuin/goldmark/renderer/html"
 	"github.com/yuin/goldmark/text"
+	"github.com/yuin/goldmark/util"
 	"go.abhg.dev/goldmark/mermaid"
 )
 
 var appVersion string
 
-// imgSrcRegex matches <img> tags with src attributes
-// Captures: 1=prefix, 2=opening quote, 3=src path, 4=closing quote
-var imgSrcRegex = regexp.MustCompile(`(<img[^>]*\ssrc=)(["']?)([^"'\s>]+)(["']?)`)
+// imgTagRegex matches whole <img> tags, allowing > inside quoted attribute values
+var imgTagRegex = regexp.MustCompile(`(?is)<img\b(?:"[^"]*"|'[^']*'|[^>"'])*>`)
+
+// imgAttrRegex matches the src and srcset attributes of an <img> tag
+// Captures: 1=name and equals sign (with leading whitespace), 2=double-quoted value,
+// 3=single-quoted value, 4=unquoted value
+var imgAttrRegex = regexp.MustCompile(`(?i)(\s(?:src|srcset)\s*=\s*)(?:"([^"]*)"|'([^']*)'|([^\s"'>]+))`)
+
+// srcsetCandidateRegex splits one srcset candidate into whitespace, URL and descriptor
+var srcsetCandidateRegex = regexp.MustCompile(`^(\s*)(\S+)([\s\S]*)$`)
+
+// uriSchemeRegex matches a URI scheme such as http:, file: or mailto:
+var uriSchemeRegex = regexp.MustCompile(`^[a-zA-Z][a-zA-Z0-9+.-]+:`)
 
 //go:embed github-markdown.css
 var style string
@@ -82,36 +96,17 @@ func main() {
 		baseDir = filepath.Dir(inputFilename)
 	}
 
-	// Convert relative image links to data URIs in the markdown source
-	processedMarkdown := processMarkdownImages(string(dat), baseDir)
-	processedBytes := []byte(processedMarkdown)
-
-	// Create Goldmark markdown processor with extensions
-	md := goldmark.New(
-		goldmark.WithExtensions(
-			extension.GFM,        // GitHub Flavored Markdown (includes tables)
-			extension.Typographer, // Smart quotes, dashes, etc.
-			&mermaid.Extender{
-				NoScript: true,   // Don't add CDN script tags - we'll add our own embedded version
-			},
-		),
-		goldmark.WithParserOptions(
-			parser.WithAutoHeadingID(), // Auto-generate heading IDs
-		),
-		goldmark.WithRendererOptions(
-			html.WithUnsafe(), // Allow raw HTML (equivalent to markdown.HTML(true))
-		),
-	)
+	md := newMarkdown(baseDir)
 
 	// Parse markdown to AST
-	doc := md.Parser().Parse(text.NewReader(processedBytes))
+	doc := md.Parser().Parse(text.NewReader(dat))
 	
 	// Extract title from AST
-	title := getTitleFromAST(doc, processedBytes)
+	title := getTitleFromAST(doc, dat)
 	
 	// Render to HTML
 	var buf bytes.Buffer
-	if err := md.Renderer().Render(&buf, processedBytes, doc); err != nil {
+	if err := md.Renderer().Render(&buf, dat, doc); err != nil {
 		log.Fatal(err)
 	}
 	htmlContent := buf.String()
@@ -230,81 +225,152 @@ func isSnap() bool {
 	return os.Getenv("SNAP_USER_COMMON") != ""
 }
 
-// processMarkdownImages processes markdown source and converts relative image paths to data URIs
-func processMarkdownImages(markdown string, baseDir string) string {
-	// Process markdown image syntax: ![alt](path "optional title")
-	imgMarkdownRegex := regexp.MustCompile(`!\[([^\]]*)\]\(([^)\s]+)(\s+(?:"[^"]*"|'[^']*'|\([^)]*\)))?\)`)
-	markdown = imgMarkdownRegex.ReplaceAllStringFunc(markdown, func(match string) string {
-		parts := imgMarkdownRegex.FindStringSubmatch(match)
-		if len(parts) < 3 {
-			return match
-		}
-		alt := parts[1]
-		imgPath := parts[2]
-		title := parts[3]
-		
-		if isRelativePath(imgPath) {
-			if dataURI := imageToDataURI(imgPath, baseDir); dataURI != "" {
-				return fmt.Sprintf("![%s](%s%s)", alt, dataURI, title)
-			}
-		}
-		return match
-	})
-	
-	// Process HTML img tags in markdown
-	markdown = processHTMLImages(markdown, baseDir)
-	
-	return markdown
+// newMarkdown creates the Goldmark processor. Relative image references, in both
+// markdown syntax and raw HTML, are embedded as data URIs while rendering.
+func newMarkdown(baseDir string) goldmark.Markdown {
+	return goldmark.New(
+		goldmark.WithExtensions(
+			extension.GFM,         // GitHub Flavored Markdown (includes tables)
+			extension.Typographer, // Smart quotes, dashes, etc.
+			&mermaid.Extender{
+				NoScript: true, // Don't add CDN script tags - we'll add our own embedded version
+			},
+		),
+		goldmark.WithParserOptions(
+			parser.WithAutoHeadingID(), // Auto-generate heading IDs
+			parser.WithASTTransformers(util.Prioritized(&imageTransformer{baseDir: baseDir}, 100)),
+		),
+		goldmark.WithRendererOptions(
+			html.WithUnsafe(), // Allow raw HTML (equivalent to markdown.HTML(true))
+			renderer.WithNodeRenderers(util.Prioritized(&htmlImageRenderer{baseDir: baseDir}, 100)),
+		),
+	)
 }
 
-// processHTMLImages processes HTML content and converts relative image src attributes to data URIs
-func processHTMLImages(html string, baseDir string) string {
-	// Use the package-level regex to match <img> tags with src attributes
-	result := imgSrcRegex.ReplaceAllStringFunc(html, func(match string) string {
-		// Extract the parts using the regex
-		parts := imgSrcRegex.FindStringSubmatch(match)
-		if len(parts) != 5 {
-			return match
-		}
-		
-		prefix := parts[1]      // "<img...src="
-		openQuote := parts[2]   // " or ' or empty
-		srcPath := parts[3]     // the actual path
-		closeQuote := parts[4]  // " or ' or empty
-		
-		// If quotes don't match, return original (malformed HTML)
-		if openQuote != closeQuote {
-			return match
-		}
-		
-		// Check if the path is relative
-		if isRelativePath(srcPath) {
-			if dataURI := imageToDataURI(srcPath, baseDir); dataURI != "" {
-				return prefix + openQuote + dataURI + closeQuote
-			}
-		}
-		
-		return match
-	})
-	
-	return result
+// imageTransformer embeds relative markdown images (inline and reference-style).
+// Working on the AST leaves images in code spans and code blocks untouched.
+type imageTransformer struct {
+	baseDir string
 }
 
-// isRelativePath checks if a path is relative (not http://, https://, //, or absolute path)
+func (t *imageTransformer) Transform(doc *ast.Document, reader text.Reader, pc parser.Context) {
+	_ = ast.Walk(doc, func(n ast.Node, entering bool) (ast.WalkStatus, error) {
+		if img, ok := n.(*ast.Image); ok && entering {
+			if dataURI := embedImage(string(img.Destination), t.baseDir); dataURI != "" {
+				img.Destination = []byte(dataURI)
+			}
+		}
+		return ast.WalkContinue, nil
+	})
+}
+
+// htmlImageRenderer renders raw HTML like the default renderer with WithUnsafe,
+// but embeds relative <img> sources first.
+type htmlImageRenderer struct {
+	baseDir string
+}
+
+func (r *htmlImageRenderer) RegisterFuncs(reg renderer.NodeRendererFuncRegisterer) {
+	reg.Register(ast.KindHTMLBlock, r.renderHTMLBlock)
+	reg.Register(ast.KindRawHTML, r.renderRawHTML)
+}
+
+func (r *htmlImageRenderer) renderHTMLBlock(w util.BufWriter, source []byte, node ast.Node, entering bool) (ast.WalkStatus, error) {
+	n := node.(*ast.HTMLBlock)
+	if entering {
+		var block []byte
+		for i := 0; i < n.Lines().Len(); i++ {
+			line := n.Lines().At(i)
+			block = append(block, line.Value(source)...)
+		}
+		html.DefaultWriter.SecureWrite(w, []byte(processHTMLImages(string(block), r.baseDir)))
+	} else if n.HasClosure() {
+		closure := n.ClosureLine
+		html.DefaultWriter.SecureWrite(w, []byte(processHTMLImages(string(closure.Value(source)), r.baseDir)))
+	}
+	return ast.WalkContinue, nil
+}
+
+func (r *htmlImageRenderer) renderRawHTML(w util.BufWriter, source []byte, node ast.Node, entering bool) (ast.WalkStatus, error) {
+	if !entering {
+		return ast.WalkSkipChildren, nil
+	}
+	n := node.(*ast.RawHTML)
+	var raw []byte
+	for i := 0; i < n.Segments.Len(); i++ {
+		segment := n.Segments.At(i)
+		raw = append(raw, segment.Value(source)...)
+	}
+	html.DefaultWriter.SecureWrite(w, []byte(processHTMLImages(string(raw), r.baseDir)))
+	return ast.WalkSkipChildren, nil
+}
+
+// embedImage returns a data URI for a relative image reference, or "" when the
+// reference is not a relative path or the file cannot be embedded.
+func embedImage(src string, baseDir string) string {
+	if !isRelativePath(src) {
+		return ""
+	}
+	// Drop any query or fragment, then decode percent-encoding
+	if i := strings.IndexAny(src, "?#"); i >= 0 {
+		src = src[:i]
+	}
+	if src == "" {
+		return ""
+	}
+	if decoded, err := url.PathUnescape(src); err == nil {
+		src = decoded
+	}
+	return imageToDataURI(src, baseDir)
+}
+
+// processHTMLImages converts relative src and srcset values of <img> tags to data URIs
+func processHTMLImages(htmlSource string, baseDir string) string {
+	return imgTagRegex.ReplaceAllStringFunc(htmlSource, func(tag string) string {
+		return imgAttrRegex.ReplaceAllStringFunc(tag, func(attr string) string {
+			parts := imgAttrRegex.FindStringSubmatch(attr)
+			prefix := parts[1]
+			value, quote := parts[4], ""
+			if rest := attr[len(prefix):]; rest[0] == '"' || rest[0] == '\'' {
+				value, quote = rest[1:len(rest)-1], rest[:1]
+			}
+
+			if strings.EqualFold(strings.TrimSpace(strings.TrimSuffix(strings.TrimSpace(prefix), "=")), "srcset") {
+				return prefix + quote + embedSrcset(value, baseDir) + quote
+			}
+			if dataURI := embedImage(value, baseDir); dataURI != "" {
+				return prefix + quote + dataURI + quote
+			}
+			return attr
+		})
+	})
+}
+
+// embedSrcset converts the relative URLs in a srcset value, keeping descriptors intact.
+// A value that already contains a data URI is left alone, as its commas make splitting unsafe.
+func embedSrcset(srcset string, baseDir string) string {
+	if strings.Contains(srcset, "data:") {
+		return srcset
+	}
+	candidates := strings.Split(srcset, ",")
+	for i, candidate := range candidates {
+		parts := srcsetCandidateRegex.FindStringSubmatch(candidate)
+		if parts == nil {
+			continue
+		}
+		if dataURI := embedImage(parts[2], baseDir); dataURI != "" {
+			candidates[i] = parts[1] + dataURI + parts[3]
+		}
+	}
+	return strings.Join(candidates, ",")
+}
+
+// isRelativePath checks if a path is relative (no URI scheme, not //, and not an absolute path)
 func isRelativePath(path string) bool {
-	if strings.HasPrefix(path, "http://") || strings.HasPrefix(path, "https://") {
+	if path == "" || strings.HasPrefix(path, "//") || uriSchemeRegex.MatchString(path) {
 		return false
 	}
-	if strings.HasPrefix(path, "//") {
-		return false
-	}
-	if strings.HasPrefix(path, "data:") {
-		return false
-	}
-	if filepath.IsAbs(path) {
-		return false
-	}
-	return true
+	return !filepath.IsAbs(path)
 }
 
 // imageToDataURI reads an image file and converts it to a base64 data URI
@@ -373,9 +439,12 @@ func imageToDataURI(imagePath string, baseDir string) string {
 		return ""
 	}
 	
-	// Determine MIME type based on file extension
-	mimeType := getMimeType(cleanedPath)
-	
+	mimeType := getMimeType(cleanedPath, data)
+	if mimeType == "" {
+		log.Printf("Warning: File %s is not a recognized image type, skipping", cleanedPath)
+		return ""
+	}
+
 	// Encode to base64
 	encoded := base64.StdEncoding.EncodeToString(data)
 	
@@ -383,10 +452,10 @@ func imageToDataURI(imagePath string, baseDir string) string {
 	return fmt.Sprintf("data:%s;base64,%s", mimeType, encoded)
 }
 
-// getMimeType returns the MIME type based on file extension
-func getMimeType(path string) string {
-	ext := strings.ToLower(filepath.Ext(path))
-	switch ext {
+// getMimeType returns the image MIME type for a file, or "" when it is not an image.
+// It trusts the file extension first, then sniffs the content.
+func getMimeType(path string, data []byte) string {
+	switch strings.ToLower(filepath.Ext(path)) {
 	case ".jpg", ".jpeg":
 		return "image/jpeg"
 	case ".png":
@@ -397,15 +466,19 @@ func getMimeType(path string) string {
 		return "image/svg+xml"
 	case ".webp":
 		return "image/webp"
+	case ".avif":
+		return "image/avif"
 	case ".bmp":
 		return "image/bmp"
+	case ".tif", ".tiff":
+		return "image/tiff"
 	case ".ico":
 		return "image/x-icon"
-	default:
-		// For unknown extensions, log a warning but try with generic image type
-		log.Printf("Warning: Unknown image extension %s for file %s, using image/* MIME type", ext, path)
-		return "image/*"
 	}
+	if detected := http.DetectContentType(data); strings.HasPrefix(detected, "image/") {
+		return detected
+	}
+	return ""
 }
 
 // embedMermaidScript adds the embedded Mermaid.js library to the HTML content
