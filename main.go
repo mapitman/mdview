@@ -18,6 +18,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/pkg/browser"
 	"github.com/yuin/goldmark"
@@ -123,32 +124,27 @@ func main() {
 	
 	// Render to HTML
 	var buf bytes.Buffer
-	if err := md.Renderer().Render(&buf, dat, doc); err != nil {
-		log.Fatal(err)
-	}
+	check(md.Renderer().Render(&buf, dat, doc))
 	htmlContent := buf.String()
-	
+
 	// Add embedded Mermaid.js and initialization script when diagrams are present
-	htmlContent = embedMermaidScript(htmlContent)
+	if hasMermaidBlock(doc) {
+		htmlContent = embedMermaidScript(htmlContent)
+	}
 
 	outfilePath := *outfilePtr
 	if outfilePath == "" {
-		outfilePath = tempFileName("mdview", ".html")
+		tempDir := getTempDir()
+		removeStaleTempFiles(tempDir, staleTempFileAge)
+		outfilePath = tempFileName(tempDir, "mdview", ".html")
 	}
 
-	f, err := os.Create(outfilePath)
-	check(err)
-	defer f.Close()
-	var actualStyle string
+	actualStyle := style
 	if *barePtr {
 		actualStyle = ""
-	} else {
-		actualStyle = style
 	}
 
-	_, err = fmt.Fprintf(f, template, actualStyle, stdhtml.EscapeString(title), htmlContent)
-	check(err)
-	f.Sync()
+	check(writeOutput(outfilePath, actualStyle, stdhtml.EscapeString(title), htmlContent))
 	browser.Stderr = nil
 	browser.Stdout = nil
 	err = browser.OpenFile(outfilePath)
@@ -189,54 +185,102 @@ func stdinIsTerminal() bool {
 	return err == nil && info.Mode()&os.ModeCharDevice != 0
 }
 
-func tempFileName(prefix, suffix string) string {
+// writeOutput writes the HTML document to path and reports any write or close error
+func writeOutput(path string, style string, title string, content string) error {
+	f, err := os.Create(path)
+	if err != nil {
+		return err
+	}
+	if _, err := fmt.Fprintf(f, template, style, title, content); err != nil {
+		f.Close()
+		return err
+	}
+	if err := f.Sync(); err != nil {
+		f.Close()
+		return err
+	}
+	return f.Close()
+}
+
+func tempFileName(dir, prefix, suffix string) string {
 	randBytes := make([]byte, 16)
 	rand.Read(randBytes)
-	return filepath.Join(getTempDir(), prefix+hex.EncodeToString(randBytes)+suffix)
+	return filepath.Join(dir, prefix+hex.EncodeToString(randBytes)+suffix)
+}
+
+// staleTempFileAge is how old a generated temp file must be before mdview removes it
+const staleTempFileAge = 24 * time.Hour
+
+// tempFileRegex matches the names produced by tempFileName, so cleanup never touches other files
+var tempFileRegex = regexp.MustCompile(`^mdview[0-9a-f]{32}\.html$`)
+
+// removeStaleTempFiles deletes generated temp files in dir that are older than maxAge.
+// The browser reads the current file after mdview exits, so only older files are removed.
+func removeStaleTempFiles(dir string, maxAge time.Duration) {
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return
+	}
+	for _, entry := range entries {
+		if !entry.Type().IsRegular() || !tempFileRegex.MatchString(entry.Name()) {
+			continue
+		}
+		if info, err := entry.Info(); err == nil && time.Since(info.ModTime()) > maxAge {
+			os.Remove(filepath.Join(dir, entry.Name()))
+		}
+	}
 }
 
 func getTempDir() string {
 	if os.Getenv("MDVIEW_DIR") != "" {
 		var tempDir = os.Getenv(("MDVIEW_DIR"))
-		if _, err := os.Stat(tempDir); os.IsNotExist(err) {
-			err = os.Mkdir(tempDir, 0700)
-			check(err)
-		}
-
+		check(os.MkdirAll(tempDir, 0700))
 		return tempDir
 	}
 
 	if isSnap() {
 		var tmpdir = os.Getenv("HOME") + "/mdview-temp"
-		if _, err := os.Stat(tmpdir); os.IsNotExist(err) {
-			err = os.Mkdir(tmpdir, 0700)
-			check(err)
-		}
+		check(os.MkdirAll(tmpdir, 0700))
 		return tmpdir
 	}
 
 	return os.TempDir()
 }
 
+// check prints a failure to standard error and exits with status 1
 func check(e error) {
-	if e != nil {
-		if errors.Is(e, fs.ErrPermission) {
-			fmt.Println("There was a permission error accessing the file.")
-		}
-
-		if errors.Is(e, fs.ErrNotExist) {
-			fmt.Println("mdview was unable to find the file.")
-		}
-
-		if isSnap() {
-			fmt.Println("Since mdview was installed as a Snap, it can only access files in your HOME directory.")
-			fmt.Println("If you need to use it with files outside of your HOME directory, choose a different installation method.")
-			fmt.Println("https://github.com/mapitman/mdview?tab=readme-ov-file#installation")
-			fmt.Println()
-		}
-
-		log.Fatal(e)
+	if e == nil {
+		return
 	}
+
+	permission := errors.Is(e, fs.ErrPermission)
+	notExist := errors.Is(e, fs.ErrNotExist)
+
+	// Name the path, because the failing file can be the input, the output or the output directory
+	target := "the file"
+	var pathErr *fs.PathError
+	if errors.As(e, &pathErr) {
+		target = pathErr.Path
+	}
+
+	if permission {
+		fmt.Fprintf(os.Stderr, "There was a permission error accessing %s.\n", target)
+	}
+
+	if notExist {
+		fmt.Fprintf(os.Stderr, "mdview was unable to find %s.\n", target)
+	}
+
+	// The Snap sandbox only blocks file access, so show its hint for those errors only
+	if isSnap() && (permission || notExist) {
+		fmt.Fprintln(os.Stderr, "Since mdview was installed as a Snap, it can only access files in your HOME directory.")
+		fmt.Fprintln(os.Stderr, "If you need to use it with files outside of your HOME directory, choose a different installation method.")
+		fmt.Fprintln(os.Stderr, "https://github.com/mapitman/mdview?tab=readme-ov-file#installation")
+		fmt.Fprintln(os.Stderr)
+	}
+
+	fmt.Fprintln(os.Stderr, "mdview:", e)
+	os.Exit(1)
 }
 
 func getTitleFromAST(doc ast.Node, source []byte) string {
@@ -533,15 +577,23 @@ func getMimeType(path string) string {
 	return ""
 }
 
+// hasMermaidBlock reports whether the document contains a mermaid code block.
+// Checking the AST ignores raw HTML that merely mentions class="mermaid".
+func hasMermaidBlock(doc ast.Node) bool {
+	found := false
+	_ = ast.Walk(doc, func(n ast.Node, entering bool) (ast.WalkStatus, error) {
+		if entering && n.Kind() == mermaid.Kind {
+			found = true
+			return ast.WalkStop, nil
+		}
+		return ast.WalkContinue, nil
+	})
+	return found
+}
+
 // embedMermaidScript adds the embedded Mermaid.js library to the HTML content
 // Since we set NoScript: true on the Mermaid extender, we need to manually add the script
 func embedMermaidScript(htmlContent string) string {
-	// Check if there are any mermaid diagrams in the content
-	// The Goldmark mermaid extension uses class="mermaid" for diagram blocks
-	if !strings.Contains(htmlContent, `class="mermaid"`) {
-		return htmlContent // No mermaid diagrams, don't add the script
-	}
-	
 	// Escape any </script> tags (with closing >) inside the mermaid.js code 
 	// to prevent premature script closure. The standard way is to escape the forward slash.
 	escapedMermaidJS := strings.ReplaceAll(mermaidJS, "</script>", "<\\/script>")

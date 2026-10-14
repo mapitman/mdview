@@ -39,13 +39,13 @@ Everything happens in `main()` in `main.go`, in a straight-line pipeline:
    - `go.abhg.dev/goldmark/mermaid` with `NoScript: true` (diagram rendering is handled ourselves)
    - `html.WithUnsafe()` (raw HTML passthrough is required for the image-tag handling above)
 4. **Title extraction** (`getTitleFromAST`/`extractText`) — walks the parsed AST for the first H1 to use as the `<title>`.
-5. **Mermaid script embedding** (`embedMermaidScript`) — only injects the embedded `mermaid.min.js` + an init script (with light/dark theme detection via `prefers-color-scheme`) if the rendered HTML actually contains a mermaid block, keeping non-diagram output lean.
-6. **Templating & output** — `template.html` and `github-markdown.css` are embedded via `//go:embed` and combined with the rendered content via `fmt.Fprintf`. `-bare` skips the CSS. Output goes to `-o <path>` if given, otherwise a random temp filename (see below).
+5. **Mermaid script embedding** (`embedMermaidScript`) — only injects the embedded `mermaid.min.js` + an init script (with light/dark theme detection via `prefers-color-scheme`) if the parsed AST contains a mermaid block (`hasMermaidBlock`; raw HTML that mentions `class="mermaid"` does not count), keeping non-diagram output lean.
+6. **Templating & output** — `template.html` and `github-markdown.css` are embedded via `//go:embed` and combined with the rendered content via `fmt.Fprintf`. `-bare` skips the CSS. `writeOutput` writes the file and reports write and close errors. Output goes to `-o <path>` if given, otherwise a random temp filename (see below).
 7. **Launch** — opens the resulting HTML file via `github.com/pkg/browser`.
 
 ### Temp file / Snap sandboxing (`getTempDir`, `isSnap`)
 
-Output location resolution order: `MDVIEW_DIR` env var → (if running as a Snap, per `SNAP_USER_COMMON` env var) `~/mdview-temp` → OS default temp dir. This exists because Snap-sandboxed browsers (e.g. Snap Firefox) can't read from `/tmp`, only from the user's home directory — `check()` also prints a Snap-specific hint on file errors for this reason.
+Output location resolution order: `MDVIEW_DIR` env var → (if running as a Snap, per `SNAP_USER_COMMON` env var) `~/mdview-temp` → OS default temp dir. `MDVIEW_DIR` and `~/mdview-temp` are created with `MkdirAll`. Before writing a temp file, `removeStaleTempFiles` deletes generated `mdview<32 hex>.html` files older than 24 hours from that directory (the browser reads the new file after mdview exits, so mdview cannot delete it right away). This exists because Snap-sandboxed browsers (e.g. Snap Firefox) can't read from `/tmp`, only from the user's home directory — `check()` writes errors to stderr, names the failing path, and prints a Snap-specific hint for permission and not-found errors for this reason.
 
 ### Packaging
 
