@@ -55,7 +55,7 @@ or `dpkg-deb` invocation). `justfile` wraps the `goreleaser` CLI so `just <targe
 local entry point. `mdview.1.md` (man page source) and `snap/` (built separately via `just snap`,
 outside goreleaser) round out packaging.
 
-`.github/workflows/release.yml` triggers on tag push, runs `just release`, and publishes a draft
+`.github/workflows/release.yml` triggers on a semver tag push (`1.2.3` or `v1.2.3`), runs `just release`, and publishes a draft
 GitHub release (goreleaser reads the version straight from the pushed git tag — no more
-previous-tag lookup step). `.github/workflows/build.yml` runs `just build` (a `goreleaser build
---snapshot`) on every push as a CI sanity check (no tests to run).
+previous-tag lookup step). `.github/workflows/build.yml` runs on every push: a `gofmt -l` check, `go vet ./...`,
+`go test ./...`, then `just build` (a `goreleaser build --snapshot`).
