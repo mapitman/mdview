@@ -388,3 +388,71 @@ func TestRemoveStaleTempFiles(t *testing.T) {
 		}
 	}
 }
+
+func TestGetTitleFromAST(t *testing.T) {
+	tests := []struct {
+		name     string
+		markdown string
+		want     string
+	}{
+		{"simple", "# Hello\n", "Hello"},
+		{"first H1 wins", "# First\n\n# Second\n", "First"},
+		{"skips other levels", "## Sub\n\n# Main\n", "Main"},
+		{"no H1", "## Sub\n\ntext\n", ""},
+		{"empty document", "", ""},
+		{"inline markup", "# Hello *big* **bold** `code` [link](http://x)\n", "Hello big bold code link"},
+		{"setext heading", "Title\n=====\n", "Title"},
+		{"surrounding space", "#   Spaced   \n", "Spaced"},
+		{"H1 below a paragraph", "text\n\n# Later\n", "Later"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			source := []byte(tt.markdown)
+			doc := goldmark.New().Parser().Parse(text.NewReader(source))
+			if got := getTitleFromAST(doc, source); got != tt.want {
+				t.Fatalf("getTitleFromAST = %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestIsRelativePath(t *testing.T) {
+	tests := map[string]bool{
+		"image.png":                true,
+		"./image.png":              true,
+		"../image.png":             true,
+		"dir/image.png":            true,
+		"my image.png":             true,
+		"":                         false,
+		"/etc/image.png":           false,
+		"//cdn.example.com/a.png":  false,
+		"http://example.com/a.png": false,
+		"https://example.com/a":    false,
+		"data:image/png;base64,AA": false,
+		"file:///tmp/a.png":        false,
+		"ftp://example.com/a.png":  false,
+		"blob:abc":                 false,
+		"mailto:a@b.c":             false,
+	}
+	for path, want := range tests {
+		if got := isRelativePath(path); got != want {
+			t.Errorf("isRelativePath(%q) = %v, want %v", path, got, want)
+		}
+	}
+}
+
+func TestTempFileName(t *testing.T) {
+	dir := t.TempDir()
+	first := tempFileName(dir, "mdview", ".html")
+	second := tempFileName(dir, "mdview", ".html")
+
+	if first == second {
+		t.Fatal("two temp file names were identical")
+	}
+	if filepath.Dir(first) != dir {
+		t.Fatalf("temp file %q is not in %q", first, dir)
+	}
+	if !tempFileRegex.MatchString(filepath.Base(first)) {
+		t.Fatalf("temp file name %q does not match the cleanup pattern", filepath.Base(first))
+	}
+}

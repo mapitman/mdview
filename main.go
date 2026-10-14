@@ -58,6 +58,10 @@ var template string
 var mermaidJS string
 
 func main() {
+	// Warnings go to stderr without a timestamp, like the messages from check()
+	log.SetFlags(0)
+	log.SetPrefix("mdview: ")
+
 	var outfilePtr = flag.String("o", "", "Output filename. (Optional)")
 	var versionPtr = flag.Bool("version", false, "Prints mdview version.")
 	var helpPtr = flag.Bool("help", false, "Prints mdview help message.")
@@ -118,10 +122,10 @@ func main() {
 
 	// Parse markdown to AST
 	doc := md.Parser().Parse(text.NewReader(dat))
-	
+
 	// Extract title from AST
 	title := getTitleFromAST(doc, dat)
-	
+
 	// Render to HTML
 	var buf bytes.Buffer
 	check(md.Renderer().Render(&buf, dat, doc))
@@ -239,7 +243,7 @@ func getTempDir() string {
 	}
 
 	if isSnap() {
-		var tmpdir = os.Getenv("HOME") + "/mdview-temp"
+		var tmpdir = filepath.Join(os.Getenv("HOME"), "mdview-temp")
 		check(os.MkdirAll(tmpdir, 0700))
 		return tmpdir
 	}
@@ -594,10 +598,10 @@ func hasMermaidBlock(doc ast.Node) bool {
 // embedMermaidScript adds the embedded Mermaid.js library to the HTML content
 // Since we set NoScript: true on the Mermaid extender, we need to manually add the script
 func embedMermaidScript(htmlContent string) string {
-	// Escape any </script> tags (with closing >) inside the mermaid.js code 
+	// Escape any </script> tags (with closing >) inside the mermaid.js code
 	// to prevent premature script closure. The standard way is to escape the forward slash.
 	escapedMermaidJS := strings.ReplaceAll(mermaidJS, "</script>", "<\\/script>")
-	
+
 	// Add the embedded Mermaid.js and initialization at the end of the content
 	// Initialize mermaid with theme detection
 	initScript := `
@@ -614,6 +618,6 @@ func embedMermaidScript(htmlContent string) string {
     });
   `
 	inlineScript := fmt.Sprintf("<script>%s</script><script>%s</script>", escapedMermaidJS, initScript)
-	
+
 	return htmlContent + inlineScript
 }
