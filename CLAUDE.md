@@ -45,7 +45,11 @@ Everything happens in `main()` in `main.go`, in a straight-line pipeline:
 
 ### Temp file / Snap sandboxing (`getTempDir`, `isSnap`)
 
-Output location resolution order: `MDVIEW_DIR` env var → (if running as a Snap, per `SNAP_USER_COMMON` env var) `~/mdview-temp` → OS default temp dir. `MDVIEW_DIR` and `~/mdview-temp` are created with `MkdirAll`. Before writing a temp file, `removeStaleTempFiles` deletes generated `mdview<32 hex>.html` files older than 24 hours from that directory (the browser reads the new file after mdview exits, so mdview cannot delete it right away). This exists because Snap-sandboxed browsers (e.g. Snap Firefox) can't read from `/tmp`, only from the user's home directory — `check()` writes errors to stderr, names the failing path, and prints a Snap-specific hint for permission and not-found errors for this reason.
+Output location resolution order: `MDVIEW_DIR` env var → (if running as a Snap, per `SNAP_USER_COMMON` env var) `~/mdview-temp` (the home directory comes from `SNAP_REAL_HOME`, because snapd remaps `HOME` to the snap's private data directory) → OS default temp dir. `MDVIEW_DIR` and `~/mdview-temp` are created with `MkdirAll`. Before writing a temp file, `removeStaleTempFiles` deletes generated `mdview<32 hex>.html` files older than 24 hours from that directory (the browser reads the new file after mdview exits, so mdview cannot delete it right away). This exists because Snap-sandboxed browsers (e.g. Snap Firefox) can't read from `/tmp`, only from the user's home directory — `check()` writes errors to stderr, names the failing path, and prints a Snap-specific hint for permission and not-found errors for this reason.
+
+The snap (`snap/snapcraft.yaml`, `base: core24`, `platforms:` instead of `architectures:`) plugs `home` and
+`desktop`. `desktop` (auto-connected) lets `xdg-open` launch the default browser; it replaced the transitional
+`unity7` plug.
 
 ### Vendored `mermaid.min.js`
 
