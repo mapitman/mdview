@@ -115,25 +115,97 @@ func TestNonEmbeddableImagesAreLeftAlone(t *testing.T) {
 }
 
 func TestGetMimeType(t *testing.T) {
-	png := []byte("\x89PNG\r\n\x1a\n")
+	tests := map[string]string{
+		"a.PNG":  "image/png",
+		"a.avif": "image/avif",
+		"a.tif":  "image/tiff",
+		"a.tiff": "image/tiff",
+		"a.svg":  "image/svg+xml",
+		"noext":  "",
+		"a.dat":  "",
+		"a.txt":  "",
+		"id_rsa": "",
+	}
+	for path, want := range tests {
+		if got := getMimeType(path); got != want {
+			t.Errorf("getMimeType(%q) = %q, want %q", path, got, want)
+		}
+	}
+}
+
+func TestImageToDataURIPathRules(t *testing.T) {
+	root := t.TempDir()
+	base := filepath.Join(root, "a", "b", "c", "d", "docs")
+	write := func(path string) {
+		t.Helper()
+		if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(path, []byte("image data"), 0644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := os.MkdirAll(base, 0755); err != nil {
+		t.Fatal(err)
+	}
+	write(filepath.Join(base, "in.png"))
+	write(filepath.Join(base, "sub", "in.png"))
+	write(filepath.Join(base, "..", "up1.png"))
+	write(filepath.Join(base, "..", "..", "..", "up3.png"))
+	write(filepath.Join(base, "..", "..", "..", "..", "up4.png"))
+	write(filepath.Join(base+"-secret", "x.png")) // sibling that shares the name prefix
+	write(filepath.Join(base, "key.pem"))
+	write(filepath.Join(root, "outside", "target.png"))
+
+	if err := os.Symlink(filepath.Join(root, "outside", "target.png"), filepath.Join(base, "link.png")); err != nil {
+		t.Skip("symlinks not supported:", err)
+	}
+	if err := os.Symlink(filepath.Join(base, "in.png"), filepath.Join(base, "inlink.png")); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(filepath.Join(base, "key.pem"), filepath.Join(base, "disguised.png")); err != nil {
+		t.Fatal(err)
+	}
+
 	tests := []struct {
-		path string
-		data []byte
-		want string
+		path  string
+		embed bool
 	}{
-		{"a.PNG", nil, "image/png"},
-		{"a.avif", nil, "image/avif"},
-		{"a.tif", nil, "image/tiff"},
-		{"a.tiff", nil, "image/tiff"},
-		{"a.svg", nil, "image/svg+xml"},
-		{"noext", png, "image/png"},
-		{"a.dat", png, "image/png"},
-		{"a.txt", []byte("hello"), ""},
+		{"in.png", true},
+		{"sub/in.png", true},
+		{"../up1.png", true},
+		{"../../../up3.png", true},
+		{"../../../../up4.png", false},
+		{"../docs-secret/x.png", true}, // one level up is allowed
+		{"key.pem", false},
+		{"missing.png", false},
+		{"inlink.png", true},
+		{"link.png", false}, // symlink to a file outside the allowed area
+		{"sub", false},      // directory
 	}
 	for _, tt := range tests {
-		if got := getMimeType(tt.path, tt.data); got != tt.want {
-			t.Errorf("getMimeType(%q) = %q, want %q", tt.path, got, tt.want)
+		got := imageToDataURI(tt.path, base) != ""
+		if got != tt.embed {
+			t.Errorf("imageToDataURI(%q) embedded = %v, want %v", tt.path, got, tt.embed)
 		}
+	}
+}
+
+func TestImageToDataURISizeLimit(t *testing.T) {
+	base := t.TempDir()
+	atLimit := filepath.Join(base, "limit.png")
+	tooBig := filepath.Join(base, "big.png")
+	if err := os.WriteFile(atLimit, make([]byte, maxImageSize), 0644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(tooBig, make([]byte, maxImageSize+1), 0644); err != nil {
+		t.Fatal(err)
+	}
+	if imageToDataURI("limit.png", base) == "" {
+		t.Error("file at the size limit was not embedded")
+	}
+	if imageToDataURI("big.png", base) != "" {
+		t.Error("file over the size limit was embedded")
 	}
 }
 
