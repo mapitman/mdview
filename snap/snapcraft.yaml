@@ -7,13 +7,11 @@ description: |
   Type `mdview --help` for options. https://github.com/mapitman/mdview
 grade: stable
 confinement: strict
-base: core22
+base: core24
 apps:
     mdview:
       command: bin/mdview
-      plugs: [home,unity7]
-      environment:
-        HOME: /home/$USER
+      plugs: [home, desktop]
 adopt-info: mdview
 parts:
   mdview:
@@ -29,10 +27,7 @@ parts:
     #   - libblkid-dev
     build-snaps:
       - go
-architectures:
-  - build-on: [amd64]
-    build-for: [amd64]
-  - build-on: [arm64]
-    build-for: [arm64]
-  - build-on: [armhf]
-    build-for: [armhf]
+platforms:
+  amd64:
+  arm64:
+  armhf:

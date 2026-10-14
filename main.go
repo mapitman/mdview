@@ -243,7 +243,12 @@ func getTempDir() string {
 	}
 
 	if isSnap() {
-		var tmpdir = filepath.Join(os.Getenv("HOME"), "mdview-temp")
+		// snapd points HOME at the snap's private data directory, so use the real home directory
+		home := os.Getenv("SNAP_REAL_HOME")
+		if home == "" {
+			home = os.Getenv("HOME")
+		}
+		var tmpdir = filepath.Join(home, "mdview-temp")
 		check(os.MkdirAll(tmpdir, 0700))
 		return tmpdir
 	}

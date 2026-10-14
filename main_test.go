@@ -325,6 +325,19 @@ func TestGetTempDir(t *testing.T) {
 		home := t.TempDir()
 		t.Setenv("MDVIEW_DIR", "")
 		t.Setenv("SNAP_USER_COMMON", "/snap/common")
+		t.Setenv("HOME", filepath.Join(home, "snap", "mdview", "1"))
+		t.Setenv("SNAP_REAL_HOME", home)
+		want := filepath.Join(home, "mdview-temp")
+		if got := getTempDir(); got != want {
+			t.Fatalf("getTempDir = %q, want %q", got, want)
+		}
+	})
+
+	t.Run("snap without SNAP_REAL_HOME falls back to HOME", func(t *testing.T) {
+		home := t.TempDir()
+		t.Setenv("MDVIEW_DIR", "")
+		t.Setenv("SNAP_USER_COMMON", "/snap/common")
+		t.Setenv("SNAP_REAL_HOME", "")
 		t.Setenv("HOME", home)
 		want := filepath.Join(home, "mdview-temp")
 		if got := getTempDir(); got != want {
