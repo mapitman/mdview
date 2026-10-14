@@ -10,7 +10,7 @@ default browser. It's essentially one file, `main.go`, plus a handful of embedde
 
 ## Build & run
 
-Requires Go (see `go.mod`/`mise.toml` for version) and, for packaging, `just`, `pandoc`, and
+Requires Go (see `go.mod` for the version) and, for packaging, `just`, `pandoc`, and
 [`goreleaser`](https://goreleaser.com/).
 
 - Quick local build: `go build` (produces `./mdview`)
@@ -23,7 +23,7 @@ Requires Go (see `go.mod`/`mise.toml` for version) and, for packaging, `just`, `
   - `just check` — validates `.goreleaser.yaml`
   - `just snap` — build snap package via `snapcraft` (kept separate; goreleaser doesn't build snaps)
   - `just clean` — remove build artifacts (`dist/`, `mdview.1`, `*.snap`)
-  - `just manpage` regenerates `mdview.1` from `mdview.1.md` via pandoc; goreleaser runs this automatically as a `before.hooks` step.
+  - `just manpage [version]` regenerates `mdview.1` from `mdview.1.md` via pandoc, replacing the `@VERSION@` placeholder in the man page header with `version` (default: `git describe --tags --always`). goreleaser runs this automatically as a `before.hooks` step and passes `{{ .Version }}`. Never write a literal app version in a source or packaging file; use a placeholder that the build replaces.
   - Versioning is read directly from git tags by goreleaser (embedded via `-ldflags -X main.appVersion={{.Version}}`) — there's no `VERSION` env var to pass anymore.
 - Run tests with `go test ./...`. There is no lint target configured; `go vet ./...` and `gofmt` are reasonable sanity checks before committing.
 
@@ -46,6 +46,13 @@ Everything happens in `main()` in `main.go`, in a straight-line pipeline:
 ### Temp file / Snap sandboxing (`getTempDir`, `isSnap`)
 
 Output location resolution order: `MDVIEW_DIR` env var → (if running as a Snap, per `SNAP_USER_COMMON` env var) `~/mdview-temp` → OS default temp dir. `MDVIEW_DIR` and `~/mdview-temp` are created with `MkdirAll`. Before writing a temp file, `removeStaleTempFiles` deletes generated `mdview<32 hex>.html` files older than 24 hours from that directory (the browser reads the new file after mdview exits, so mdview cannot delete it right away). This exists because Snap-sandboxed browsers (e.g. Snap Firefox) can't read from `/tmp`, only from the user's home directory — `check()` writes errors to stderr, names the failing path, and prints a Snap-specific hint for permission and not-found errors for this reason.
+
+### Vendored `mermaid.min.js`
+
+`mermaid.min.js` is a vendored copy of the Mermaid library, embedded with `//go:embed`. Print its
+version with `grep -o 'version:"[0-9.]*"' mermaid.min.js`. To update it, download
+`https://cdn.jsdelivr.net/npm/mermaid@<version>/dist/mermaid.min.js` over the file, render a markdown
+file with a mermaid block (light and dark mode), and commit the new file.
 
 ### Packaging
 
