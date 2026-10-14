@@ -2,10 +2,12 @@ package main
 
 import (
 	"bytes"
+	"flag"
 	"fmt"
 	stdhtml "html"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -230,6 +232,44 @@ func TestTitleIsEscaped(t *testing.T) {
 			fmt.Fprintf(&out, template, "", stdhtml.EscapeString(title), "")
 			if !strings.Contains(out.String(), tt.want) {
 				t.Fatalf("want %s in: %s", tt.want, out.String())
+			}
+		})
+	}
+}
+
+func TestParseFlags(t *testing.T) {
+	tests := []struct {
+		name     string
+		args     []string
+		wantPos  []string
+		wantOut  string
+		wantBare bool
+	}{
+		{"no arguments", nil, nil, "", false},
+		{"flags first", []string{"-o", "x.html", "a.md"}, []string{"a.md"}, "x.html", false},
+		{"flags after filename", []string{"a.md", "-o", "x.html", "-b"}, []string{"a.md"}, "x.html", true},
+		{"flags on both sides", []string{"-b", "a.md", "-o", "x.html"}, []string{"a.md"}, "x.html", true},
+		{"stdin marker", []string{"-", "-o", "x.html"}, []string{"-"}, "x.html", false},
+		{"double dash", []string{"-b", "--", "-weird.md"}, []string{"-weird.md"}, "", true},
+		{"flags after double dash are positional", []string{"--", "a.md", "-b"}, []string{"a.md", "-b"}, "", false},
+		{"several files", []string{"a.md", "b.md"}, []string{"a.md", "b.md"}, "", false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			fs := flag.NewFlagSet("mdview", flag.ContinueOnError)
+			out := fs.String("o", "", "")
+			bare := fs.Bool("b", false, "")
+
+			got, err := parseFlags(fs, tt.args)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !reflect.DeepEqual(got, tt.wantPos) {
+				t.Errorf("positional = %q, want %q", got, tt.wantPos)
+			}
+			if *out != tt.wantOut || *bare != tt.wantBare {
+				t.Errorf("o = %q, b = %v; want o = %q, b = %v", *out, *bare, tt.wantOut, tt.wantBare)
 			}
 		})
 	}
