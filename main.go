@@ -13,7 +13,6 @@ import (
 	"io"
 	"io/fs"
 	"log"
-	"net/http"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -373,88 +372,92 @@ func isRelativePath(path string) bool {
 	return !filepath.IsAbs(path)
 }
 
-// imageToDataURI reads an image file and converts it to a base64 data URI
+// maxImageSize is the largest image file that is embedded
+const maxImageSize = 10 * 1024 * 1024 // 10MB
+
+// maxParentLevels is how many directory levels above the base directory an image may be
+const maxParentLevels = 3
+
+// imageToDataURI reads an image file and converts it to a base64 data URI.
+// It returns "" and logs a warning when the file must not or cannot be embedded.
 func imageToDataURI(imagePath string, baseDir string) string {
-	// Resolve the full path relative to the markdown file
-	fullPath := filepath.Join(baseDir, imagePath)
-	
-	// Clean and validate the path to prevent path traversal attacks
-	cleanedPath, err := filepath.Abs(fullPath)
-	if err != nil {
-		log.Printf("Warning: Invalid image path %s: %v", fullPath, err)
+	// Check the extension first so that non-image files are never opened
+	mimeType := getMimeType(imagePath)
+	if mimeType == "" {
+		log.Printf("Warning: %s does not have a supported image extension, skipping", imagePath)
 		return ""
 	}
-	
-	// Ensure the resolved path is within or relative to the base directory
-	cleanedBase, err := filepath.Abs(baseDir)
+
+	// Resolve symlinks in both paths so that a link cannot point outside the allowed area
+	resolvedBase, err := filepath.EvalSymlinks(baseDir)
 	if err != nil {
 		log.Printf("Warning: Invalid base directory %s: %v", baseDir, err)
 		return ""
 	}
-	
-	// Check if the cleaned path starts with the base directory or is a reasonable relative reference
-	// We allow accessing parent directories for flexibility with markdown repos
-	if !strings.HasPrefix(cleanedPath, cleanedBase) {
-		relPath, err := filepath.Rel(cleanedBase, cleanedPath)
-		if err != nil {
-			log.Printf("Warning: Unable to determine relative path for %s: %v", imagePath, err)
-			return ""
-		}
-		
-		// If the path goes outside the base directory, check parent traversal limits
-		if strings.HasPrefix(relPath, "..") {
-			// Allow up to 3 levels of parent directory traversal for flexibility
-			// Count the number of ".." path components
-			components := strings.Split(filepath.ToSlash(relPath), "/")
-			parentLevels := 0
-			for _, component := range components {
-				if component == ".." {
-					parentLevels++
-				}
-			}
-			if parentLevels > 3 {
-				log.Printf("Warning: Image path %s goes too many levels above base directory", imagePath)
-				return ""
-			}
-		}
-	}
-	
-	// Check file size before reading (limit to 10MB to prevent memory issues)
-	fileInfo, err := os.Stat(cleanedPath)
+	resolvedBase, err = filepath.Abs(resolvedBase)
 	if err != nil {
-		log.Printf("Warning: Unable to stat image file %s: %v", cleanedPath, err)
+		log.Printf("Warning: Invalid base directory %s: %v", baseDir, err)
 		return ""
 	}
-	
-	const maxSize = 10 * 1024 * 1024 // 10MB
-	if fileInfo.Size() > maxSize {
-		log.Printf("Warning: Image file %s is too large (%d bytes, max %d bytes)", cleanedPath, fileInfo.Size(), maxSize)
-		return ""
-	}
-	
-	// Read the image file
-	data, err := os.ReadFile(cleanedPath)
+	resolvedPath, err := filepath.EvalSymlinks(filepath.Join(resolvedBase, imagePath))
 	if err != nil {
-		log.Printf("Warning: Unable to read image file %s: %v", cleanedPath, err)
-		return ""
-	}
-	
-	mimeType := getMimeType(cleanedPath, data)
-	if mimeType == "" {
-		log.Printf("Warning: File %s is not a recognized image type, skipping", cleanedPath)
+		log.Printf("Warning: Unable to resolve image file %s: %v", imagePath, err)
 		return ""
 	}
 
-	// Encode to base64
-	encoded := base64.StdEncoding.EncodeToString(data)
-	
-	// Return data URI
-	return fmt.Sprintf("data:%s;base64,%s", mimeType, encoded)
+	// Allow images in the base directory, below it, or a few levels above it
+	// (for markdown repos that keep images in a sibling directory)
+	relPath, err := filepath.Rel(resolvedBase, resolvedPath)
+	if err != nil {
+		log.Printf("Warning: Unable to determine relative path for %s: %v", imagePath, err)
+		return ""
+	}
+	parentLevels := 0
+	for _, component := range strings.Split(filepath.ToSlash(relPath), "/") {
+		if component != ".." {
+			break
+		}
+		parentLevels++
+	}
+	if parentLevels > maxParentLevels {
+		log.Printf("Warning: Image path %s goes too many levels above base directory", imagePath)
+		return ""
+	}
+
+	// Read at most one byte past the limit, so a file that grows after the check is still capped
+	f, err := os.Open(resolvedPath)
+	if err != nil {
+		log.Printf("Warning: Unable to read image file %s: %v", resolvedPath, err)
+		return ""
+	}
+	defer f.Close()
+
+	fileInfo, err := f.Stat()
+	if err != nil {
+		log.Printf("Warning: Unable to stat image file %s: %v", resolvedPath, err)
+		return ""
+	}
+	if !fileInfo.Mode().IsRegular() {
+		log.Printf("Warning: Image file %s is not a regular file", resolvedPath)
+		return ""
+	}
+
+	data, err := io.ReadAll(io.LimitReader(f, maxImageSize+1))
+	if err != nil {
+		log.Printf("Warning: Unable to read image file %s: %v", resolvedPath, err)
+		return ""
+	}
+	if len(data) > maxImageSize {
+		log.Printf("Warning: Image file %s is too large (max %d bytes)", resolvedPath, maxImageSize)
+		return ""
+	}
+
+	return fmt.Sprintf("data:%s;base64,%s", mimeType, base64.StdEncoding.EncodeToString(data))
 }
 
-// getMimeType returns the image MIME type for a file, or "" when it is not an image.
-// It trusts the file extension first, then sniffs the content.
-func getMimeType(path string, data []byte) string {
+// getMimeType returns the MIME type for a supported image extension, or "" for any other file.
+// The extension allowlist keeps non-image files (keys, configs) out of the output.
+func getMimeType(path string) string {
 	switch strings.ToLower(filepath.Ext(path)) {
 	case ".jpg", ".jpeg":
 		return "image/jpeg"
@@ -474,9 +477,6 @@ func getMimeType(path string, data []byte) string {
 		return "image/tiff"
 	case ".ico":
 		return "image/x-icon"
-	}
-	if detected := http.DetectContentType(data); strings.HasPrefix(detected, "image/") {
-		return detected
 	}
 	return ""
 }
