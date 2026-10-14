@@ -9,6 +9,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	stdhtml "html"
 	"io"
 	"io/fs"
 	"log"
@@ -133,7 +134,7 @@ func main() {
 		actualStyle = style
 	}
 
-	_, err = fmt.Fprintf(f, template, actualStyle, title, htmlContent)
+	_, err = fmt.Fprintf(f, template, actualStyle, stdhtml.EscapeString(title), htmlContent)
 	check(err)
 	f.Sync()
 	browser.Stderr = nil
@@ -202,7 +203,7 @@ func getTitleFromAST(doc ast.Node, source []byte) string {
 			// Extract all text from heading and its children recursively
 			var buf bytes.Buffer
 			extractText(heading, source, &buf)
-			title = strings.TrimSpace(buf.String())
+			title = stdhtml.UnescapeString(strings.TrimSpace(buf.String()))
 			return ast.WalkStop, nil
 		}
 		return ast.WalkContinue, nil
