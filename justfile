@@ -24,5 +24,6 @@ clean:
 
 	# snapcraft clean mdview -s pull
 
-manpage:
-	pandoc --standalone --to man mdview.1.md -o mdview.1
+# The version defaults to the latest git tag; goreleaser passes its own.
+manpage version=`git describe --tags --always`:
+	sed 's|@VERSION@|{{version}}|g' mdview.1.md | pandoc --standalone --to man -o mdview.1

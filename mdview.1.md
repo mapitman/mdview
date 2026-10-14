@@ -1,4 +1,4 @@
-% MDVIEW(1) Version 1.4.0 | "Markdown View" Documentation
+% MDVIEW(1) Version @VERSION@ | "Markdown View" Documentation
 
 # NAME
 
@@ -6,20 +6,26 @@
 
 # SYNOPSIS
 
-**mdview** _filename_  
-**mdview** **-**  
-**mdview** \[**-h**|**--help**|**-v**|**--version**]
+**mdview** \[**-b**] \[**-o** _output_] _filename_  
+**mdview** \[**-b**] \[**-o** _output_] **-**  
+**mdview** **-h**|**-help**|**-v**|**-version**
 
 # DESCRIPTION
 
 Formats a markdown file as HTML, writes it to a temporary file and
 then launches that file in the default web browser. By default, it will
 use the operating system's default temporary directory unless the
-environment variable MDVIEW_DIR is set.
+environment variable MDVIEW_DIR is set. Generated temporary files that
+are more than 24 hours old are removed from that directory the next
+time mdview writes one.
 
 If _filename_ is a single dash (**-**), the markdown is read from
 standard input. Relative image paths are then resolved against the
 current working directory.
+
+Options can be given before or after _filename_, with one or two
+leading dashes (for example **-help** or **--help**). Use **--** to end
+the options.
 
 ## Options
 
@@ -31,7 +37,7 @@ Bare HTML with no style applied.
 
 Prints mdview help message.
 
-**-o** _filename_
+**-o** _output_
 
 Output filename. (Optional)
 
