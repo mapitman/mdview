@@ -2,12 +2,15 @@ package main
 
 import (
 	"bytes"
+	"fmt"
+	stdhtml "html"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 
 	"github.com/yuin/goldmark"
+	"github.com/yuin/goldmark/text"
 )
 
 func TestProcessMarkdownImages(t *testing.T) {
@@ -59,6 +62,32 @@ func TestProcessMarkdownImages(t *testing.T) {
 			}
 			if tt.wantTitleHTML != "" && !strings.Contains(rendered.String(), tt.wantTitleHTML) {
 				t.Fatalf("rendered image lost its title attribute: %s", rendered.String())
+			}
+		})
+	}
+}
+
+func TestTitleIsEscaped(t *testing.T) {
+	tests := []struct {
+		name   string
+		source string
+		want   string
+	}{
+		{"ampersand", "# Q&A\n", "<title>Q&amp;A</title>"},
+		{"less-than", "# 1 < 2 > 0\n", "<title>1 &lt; 2 &gt; 0</title>"},
+		{"entity", "# &lt;b&gt; &amp; c\n", "<title>&lt;b&gt; &amp; c</title>"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			source := []byte(tt.source)
+			doc := goldmark.New().Parser().Parse(text.NewReader(source))
+			title := getTitleFromAST(doc, source)
+
+			var out bytes.Buffer
+			fmt.Fprintf(&out, template, "", stdhtml.EscapeString(title), "")
+			if !strings.Contains(out.String(), tt.want) {
+				t.Fatalf("want %s in: %s", tt.want, out.String())
 			}
 		})
 	}
