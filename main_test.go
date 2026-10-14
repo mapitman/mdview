@@ -10,6 +10,7 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/yuin/goldmark"
 	"github.com/yuin/goldmark/text"
@@ -272,5 +273,118 @@ func TestParseFlags(t *testing.T) {
 				t.Errorf("o = %q, b = %v; want o = %q, b = %v", *out, *bare, tt.wantOut, tt.wantBare)
 			}
 		})
+	}
+}
+
+func TestHasMermaidBlock(t *testing.T) {
+	tests := []struct {
+		name     string
+		markdown string
+		want     bool
+	}{
+		{"mermaid fence", "```mermaid\ngraph TD; A-->B\n```\n", true},
+		{"other fence", "```go\nfmt.Println()\n```\n", false},
+		{"no code", "# Title\n\ntext\n", false},
+		{"raw html mentioning mermaid", "<pre class=\"mermaid\">graph TD</pre>\n", false},
+		{"code span mentioning mermaid", "Use `class=\"mermaid\"` in HTML.\n", false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			source := []byte(tt.markdown)
+			doc := newMarkdown(".").Parser().Parse(text.NewReader(source))
+			if got := hasMermaidBlock(doc); got != tt.want {
+				t.Fatalf("hasMermaidBlock = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestEmbedMermaidScript(t *testing.T) {
+	out := embedMermaidScript("<p>x</p>")
+	if !strings.HasPrefix(out, "<p>x</p><script>") || !strings.Contains(out, "mermaid.initialize") {
+		t.Fatalf("mermaid script was not appended: %.80s", out)
+	}
+	if strings.Count(out, "</script>") != 2 {
+		t.Fatalf("expected exactly two closing script tags, got %d", strings.Count(out, "</script>"))
+	}
+}
+
+func TestGetTempDir(t *testing.T) {
+	t.Run("MDVIEW_DIR is created with parents", func(t *testing.T) {
+		dir := filepath.Join(t.TempDir(), "a", "b", "c")
+		t.Setenv("MDVIEW_DIR", dir)
+		if got := getTempDir(); got != dir {
+			t.Fatalf("getTempDir = %q, want %q", got, dir)
+		}
+		if info, err := os.Stat(dir); err != nil || !info.IsDir() {
+			t.Fatalf("directory was not created: %v", err)
+		}
+	})
+
+	t.Run("snap uses mdview-temp in HOME", func(t *testing.T) {
+		home := t.TempDir()
+		t.Setenv("MDVIEW_DIR", "")
+		t.Setenv("SNAP_USER_COMMON", "/snap/common")
+		t.Setenv("HOME", home)
+		want := filepath.Join(home, "mdview-temp")
+		if got := getTempDir(); got != want {
+			t.Fatalf("getTempDir = %q, want %q", got, want)
+		}
+	})
+
+	t.Run("default is the OS temp dir", func(t *testing.T) {
+		t.Setenv("MDVIEW_DIR", "")
+		t.Setenv("SNAP_USER_COMMON", "")
+		if got := getTempDir(); got != os.TempDir() {
+			t.Fatalf("getTempDir = %q, want %q", got, os.TempDir())
+		}
+	})
+}
+
+func TestWriteOutput(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "out.html")
+	if err := writeOutput(path, "body{}", "T", "<p>hi</p>"); err != nil {
+		t.Fatal(err)
+	}
+	got, err := os.ReadFile(path)
+	if err != nil || !strings.Contains(string(got), "<title>T</title>") || !strings.Contains(string(got), "<p>hi</p>") {
+		t.Fatalf("unexpected output (err %v): %s", err, got)
+	}
+	if err := writeOutput(filepath.Join(dir, "missing", "out.html"), "", "T", ""); err == nil {
+		t.Fatal("expected an error for a missing directory")
+	}
+}
+
+func TestRemoveStaleTempFiles(t *testing.T) {
+	dir := t.TempDir()
+	name := func(c string) string { return "mdview" + strings.Repeat(c, 32) + ".html" }
+	old := time.Now().Add(-48 * time.Hour)
+
+	files := map[string]time.Time{
+		name("a"):         old,        // stale generated file: removed
+		name("b"):         time.Now(), // fresh generated file: kept
+		"notes.html":      old,        // other file: kept
+		"mdview-old.html": old,        // wrong name pattern: kept
+		name("c") + "x":   old,        // wrong suffix: kept
+	}
+	for file, mtime := range files {
+		path := filepath.Join(dir, file)
+		if err := os.WriteFile(path, []byte("x"), 0644); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.Chtimes(path, mtime, mtime); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	removeStaleTempFiles(dir, staleTempFileAge)
+
+	for file := range files {
+		_, err := os.Stat(filepath.Join(dir, file))
+		wantRemoved := file == name("a")
+		if wantRemoved != os.IsNotExist(err) {
+			t.Errorf("%s: removed = %v, want %v", file, os.IsNotExist(err), wantRemoved)
+		}
 	}
 }
